@@ -59,4 +59,53 @@
     </dependency>
 
   </dependencies>
+
+  <profiles>
+    <profile>
+      <id>ipv4 stack</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <configuration combine.children="append" combine.self="append">
+                <systemProperties>
+                  <property>
+                    <name>localhost</name>
+                    <value>127.1</value>
+                  </property>
+                </systemProperties>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+    <profile>
+      <id>ipv6 stack</id>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <configuration combine.children="append" combine.self="append">
+                <debugForkedProcess>true</debugForkedProcess>
+                <systemProperties>
+                  <property>
+                    <name>localhost</name>
+                    <value>[::]</value>
+                  </property>
+                </systemProperties>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+  </profiles>
 </project>
