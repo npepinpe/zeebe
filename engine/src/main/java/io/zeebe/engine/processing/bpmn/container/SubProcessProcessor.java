@@ -43,79 +43,61 @@ public final class SubProcessProcessor
   }
 
   @Override
-  public void onActivating(
+  public void onActivate(
       final ExecutableFlowElementContainer element, final BpmnElementContext context) {
 
     variableMappingBehavior
         .applyInputMappings(context, element)
         .flatMap(ok -> eventSubscriptionBehavior.subscribeToEvents(element, context))
+        .map(ok -> stateTransitionBehavior.transitionToActivated(context))
         .ifRightOrLeft(
-            ok -> stateTransitionBehavior.transitionToActivated(context),
-            failure -> incidentBehavior.createIncident(failure, context));
-  }
+            activated -> {
+              final ExecutableStartEvent startEvent;
+              if (element.hasNoneStartEvent()) {
+                // embedded sub-process is activated
+                startEvent = element.getNoneStartEvent();
+              } else {
+                // event sub-process is activated
+                startEvent = element.getStartEvents().get(0);
+              }
 
-  @Override
-  public void onActivated(
-      final ExecutableFlowElementContainer element, final BpmnElementContext context) {
-
-    final ExecutableStartEvent startEvent;
-    if (element.hasNoneStartEvent()) {
-      // embedded sub-process is activated
-      startEvent = element.getNoneStartEvent();
-    } else {
-      // event sub-process is activated
-      startEvent = element.getStartEvents().get(0);
-    }
-
-    stateTransitionBehavior.activateChildInstance(context, startEvent);
-  }
-
-  @Override
-  public void onCompleting(
-      final ExecutableFlowElementContainer element, final BpmnElementContext context) {
-
-    variableMappingBehavior
-        .applyOutputMappings(context, element)
-        .ifRightOrLeft(
-            ok -> {
-              eventSubscriptionBehavior.unsubscribeFromEvents(context);
-              stateTransitionBehavior.transitionToCompleted(context);
+              stateTransitionBehavior.activateChildInstance(activated, startEvent);
             },
             failure -> incidentBehavior.createIncident(failure, context));
   }
 
   @Override
-  public void onCompleted(
+  public void onComplete(
       final ExecutableFlowElementContainer element, final BpmnElementContext context) {
-
-    stateTransitionBehavior.takeOutgoingSequenceFlows(element, context);
-
-    stateBehavior.removeElementInstance(context);
+    variableMappingBehavior
+        .applyOutputMappings(context, element)
+        .map(
+            ok -> {
+              // todo wait for phil message migration
+              eventSubscriptionBehavior.unsubscribeFromEvents(context);
+              return stateTransitionBehavior.transitionToCompleted(context);
+            })
+        .ifRightOrLeft(
+            completed -> stateTransitionBehavior.takeOutgoingSequenceFlows(element, completed),
+            failure -> incidentBehavior.createIncident(failure, context));
   }
 
   @Override
-  public void onTerminating(
+  public void onTerminate(
       final ExecutableFlowElementContainer element, final BpmnElementContext context) {
 
     eventSubscriptionBehavior.unsubscribeFromEvents(context);
 
     final var noActiveChildInstances = stateTransitionBehavior.terminateChildInstances(context);
     if (noActiveChildInstances) {
-      stateTransitionBehavior.transitionToTerminated(context);
+      final var terminated = stateTransitionBehavior.transitionToTerminated(context);
+
+      eventSubscriptionBehavior.publishTriggeredBoundaryEvent(terminated);
+
+      incidentBehavior.resolveIncidents(terminated);
+
+      stateTransitionBehavior.onElementTerminated(element, terminated);
     }
-  }
-
-  @Override
-  public void onTerminated(
-      final ExecutableFlowElementContainer element, final BpmnElementContext context) {
-
-    eventSubscriptionBehavior.publishTriggeredBoundaryEvent(context);
-
-    incidentBehavior.resolveIncidents(context);
-
-    stateTransitionBehavior.onElementTerminated(element, context);
-
-    stateBehavior.removeElementInstance(context);
   }
 
   @Override

@@ -288,7 +288,8 @@ public final class BpmnStateTransitionBehavior {
               childInstanceContext.getRecordValue());
         }
 
-      } else if (childInstanceContext.getIntent() == ProcessInstanceIntent.ELEMENT_COMPLETED) {
+      } else if (childInstanceContext.getIntent() == ProcessInstanceIntent.ELEMENT_COMPLETED
+          && !MigratedStreamProcessors.isMigrated(childInstanceContext.getBpmnElementType())) {
         // clean up the state because the completed event will not be processed
         stateBehavior.removeElementInstance(childInstanceContext);
       }
@@ -307,6 +308,7 @@ public final class BpmnStateTransitionBehavior {
     if (outgoingSequenceFlows.isEmpty()) {
       // behaves like an implicit end event
 
+      // todo(zell): needs to be migrated for Call Activity, Sub Process and Multi instance!
       onElementCompleted(element, context);
 
     } else {
