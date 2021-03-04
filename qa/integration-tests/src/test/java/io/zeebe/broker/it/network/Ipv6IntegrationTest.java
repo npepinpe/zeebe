@@ -26,7 +26,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 
@@ -83,9 +82,8 @@ public class Ipv6IntegrationTest {
         ZeebeClient.newClientBuilder()
             .usePlaintext()
             .gatewayAddress(gateway.getExternalGatewayAddress());
-    final Topology topology;
     try (final var client = zeebeClientBuilder.build()) {
-      topology = client.newTopologyRequest().send().join(5, TimeUnit.SECONDS);
+      final Topology topology = client.newTopologyRequest().send().join(5, TimeUnit.SECONDS);
       // then - can find each other
       TopologyAssert.assertThat(topology).isComplete(3, 1);
     }
@@ -98,14 +96,15 @@ public class Ipv6IntegrationTest {
     final var hostName = String.format("[%s]", hostNameWithoutBraces);
 
     initialContactPoints.add(hostName + ":" + ZeebePort.INTERNAL.getPort());
-    LoggerFactory.getLogger("Test")
-        .info("Configuring broker with initial contactpoints {}", initialContactPoints);
 
     broker
         .withNetwork(network)
         .withNetworkAliases(NETWORK_ALIAS)
         .withCreateContainerCmdModifier(
-            createContainerCmd -> createContainerCmd.withIpv6Address(hostNameWithoutBraces).withHostName(hostNameWithoutBraces))
+            createContainerCmd ->
+                createContainerCmd
+                    .withIpv6Address(hostNameWithoutBraces)
+                    .withHostName(hostNameWithoutBraces))
         .withEnv("ZEEBE_BROKER_NETWORK_MAXMESSAGESIZE", "128KB")
         .withEnv("ZEEBE_BROKER_CLUSTER_NODEID", String.valueOf(index))
         .withEnv("ZEEBE_BROKER_CLUSTER_CLUSTERSIZE", String.valueOf(clusterSize))
@@ -133,6 +132,7 @@ public class Ipv6IntegrationTest {
         .withNetwork(network)
         .withNetworkAliases(NETWORK_ALIAS)
         .withCreateContainerCmdModifier(
-            createContainerCmd -> createContainerCmd.withIpv6Address(address).withHostName(address));
+            createContainerCmd ->
+                createContainerCmd.withIpv6Address(address).withHostName(address));
   }
 }
