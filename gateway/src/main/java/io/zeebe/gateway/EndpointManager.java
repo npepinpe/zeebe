@@ -7,7 +7,7 @@
  */
 package io.zeebe.gateway;
 
-import com.google.common.net.HostAndPort;
+import io.atomix.utils.net.Address;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.zeebe.gateway.ResponseMapper.BrokerResponseMapper;
@@ -72,12 +72,12 @@ public final class EndpointManager {
   private void addBrokerInfo(
       final Builder brokerInfo, final Integer brokerId, final BrokerClusterState topology) {
     final String brokerAddress = topology.getBrokerAddress(brokerId);
-    final HostAndPort hostAndPort = HostAndPort.fromString(brokerAddress);
+    final Address address = Address.from(brokerAddress);
 
     brokerInfo
         .setNodeId(brokerId)
-        .setHost(hostAndPort.getHost())
-        .setPort(hostAndPort.getPort())
+        .setHost(address.host())
+        .setPort(address.port())
         .setVersion(topology.getBrokerVersion(brokerId));
   }
 

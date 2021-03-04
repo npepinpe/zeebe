@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 public final class SocketUtil {
   static final Logger LOG = LoggerFactory.getLogger("io.zeebe.test.util.SocketUtil");
 
-  private static final String DEFAULT_HOST = System.getProperty("localhost", "localhost");
+  private static final String DEFAULT_HOST = "localhost";
   // Docker maps exposed ports to random local ports, starting at 32768; this is undocumented, but
   // observed empirically, and is aligned with Linux conventions, e.g. see
   // https://tldp.org/LDP/solrhe/Securing-Optimizing-Linux-RH-Edition-v1.3/chap6sec70.html
