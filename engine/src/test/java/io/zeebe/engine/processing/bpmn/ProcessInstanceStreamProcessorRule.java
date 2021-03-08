@@ -20,7 +20,7 @@ import io.zeebe.el.ExpressionLanguageFactory;
 import io.zeebe.engine.processing.ProcessEventProcessors;
 import io.zeebe.engine.processing.common.CatchEventBehavior;
 import io.zeebe.engine.processing.common.ExpressionProcessor;
-import io.zeebe.engine.processing.job.JobEventProcessors;
+import io.zeebe.engine.processing.job.JobCommandProcessors;
 import io.zeebe.engine.processing.message.command.SubscriptionCommandSender;
 import io.zeebe.engine.processing.streamprocessor.CopiedRecords;
 import io.zeebe.engine.processing.streamprocessor.StreamProcessorLifecycleAware;
@@ -128,7 +128,7 @@ public final class ProcessInstanceStreamProcessorRule extends ExternalResource
               dueDateTimerChecker,
               writers);
 
-          JobEventProcessors.addJobProcessors(
+          JobCommandProcessors.addJobProcessors(
               typedRecordProcessors,
               zeebeState,
               type -> {},

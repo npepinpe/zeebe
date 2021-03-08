@@ -8,7 +8,6 @@
 package io.zeebe.engine.processing.job;
 
 import io.zeebe.engine.processing.streamprocessor.CommandProcessor;
-import io.zeebe.engine.processing.streamprocessor.MigratedStreamProcessors;
 import io.zeebe.engine.processing.streamprocessor.TypedRecord;
 import io.zeebe.engine.processing.streamprocessor.writers.StateWriter;
 import io.zeebe.engine.processing.streamprocessor.writers.TypedCommandWriter;
@@ -23,7 +22,6 @@ import io.zeebe.protocol.impl.record.value.processinstance.ProcessInstanceRecord
 import io.zeebe.protocol.record.intent.Intent;
 import io.zeebe.protocol.record.intent.JobIntent;
 import io.zeebe.protocol.record.intent.ProcessInstanceIntent;
-import io.zeebe.protocol.record.value.BpmnElementType;
 
 public final class JobCompleteProcessor implements CommandProcessor<JobRecord> {
 
@@ -65,15 +63,8 @@ public final class JobCompleteProcessor implements CommandProcessor<JobRecord> {
       if (scopeInstance != null && scopeInstance.isActive()) {
         final ProcessInstanceRecord processInstanceRecord = serviceTask.getValue();
 
-        // TODO (#6172) send out COMPLETE_ELEMENT command when service task processor is registered
-        // for COMPLETE_ELEMENT commands; switch out for command writer
-        if (MigratedStreamProcessors.isMigrated(BpmnElementType.SERVICE_TASK)) {
-          stateWriter.appendFollowUpEvent(
-              serviceTaskKey, ProcessInstanceIntent.ELEMENT_COMPLETING, processInstanceRecord);
-        } else {
-          eventWriter.appendFollowUpEvent(
-              serviceTaskKey, ProcessInstanceIntent.ELEMENT_COMPLETING, processInstanceRecord);
-        }
+        commandWriter.appendFollowUpCommand(
+            serviceTaskKey, ProcessInstanceIntent.COMPLETE_ELEMENT, processInstanceRecord);
       }
     }
   }

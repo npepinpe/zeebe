@@ -17,7 +17,7 @@ import io.zeebe.protocol.record.intent.JobBatchIntent;
 import io.zeebe.protocol.record.intent.JobIntent;
 import java.util.function.Consumer;
 
-public final class JobEventProcessors {
+public final class JobCommandProcessors {
 
   public static void addJobProcessors(
       final TypedRecordProcessors typedRecordProcessors,
@@ -30,7 +30,6 @@ public final class JobEventProcessors {
     final var keyGenerator = zeebeState.getKeyGenerator();
 
     typedRecordProcessors
-        .onCommand(ValueType.JOB, JobIntent.CREATE, new CreateProcessor())
         .onCommand(ValueType.JOB, JobIntent.COMPLETE, new JobCompleteProcessor(zeebeState, writers))
         .onCommand(ValueType.JOB, JobIntent.FAIL, new JobFailProcessor(zeebeState))
         .onCommand(
