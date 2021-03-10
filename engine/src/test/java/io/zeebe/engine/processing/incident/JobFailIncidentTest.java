@@ -367,7 +367,8 @@ public final class JobFailIncidentTest {
     assertThat(resolvedIncidentEvent.getKey()).isEqualTo(incidentCreatedEvent.getKey());
     assertThat(resolvedIncidentEvent.getSourceRecordPosition())
         .isEqualTo(terminatingTask.getSourceRecordPosition());
-    assertThat(jobCancelCommand.getSourceRecordPosition()).isEqualTo(terminatingTask.getPosition());
+    assertThat(jobCancelCommand.getSourceRecordPosition())
+        .isEqualTo(terminatingTask.getSourceRecordPosition());
 
     assertThat(resolvedIncidentEvent.getValue())
         .hasErrorType(ErrorType.JOB_NO_RETRIES)
