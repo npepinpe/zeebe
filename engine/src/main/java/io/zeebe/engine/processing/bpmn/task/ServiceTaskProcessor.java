@@ -74,8 +74,8 @@ public final class ServiceTaskProcessor implements BpmnElementProcessor<Executab
 
   @Override
   public void onActivate(final ExecutableServiceTask element, final BpmnElementContext context) {
-    stateTransitionBehavior.transitionToActivating(context);
-    final var scopeKey = context.getElementInstanceKey();
+    final var activatingContext = stateTransitionBehavior.transitionToActivating(context);
+    final var scopeKey = activatingContext.getElementInstanceKey();
 
     final Either<Failure, String> jobTypeOrFailure =
         expressionBehavior.evaluateStringExpression(element.getType(), scopeKey);
@@ -83,8 +83,9 @@ public final class ServiceTaskProcessor implements BpmnElementProcessor<Executab
         .flatMap(
             jobType -> expressionBehavior.evaluateLongExpression(element.getRetries(), scopeKey))
         .ifRightOrLeft(
-            retries -> attemptToCreateJob(element, context, jobTypeOrFailure.get(), retries),
-            failure -> incidentBehavior.createIncident(failure, context));
+            retries ->
+                attemptToCreateJob(element, activatingContext, jobTypeOrFailure.get(), retries),
+            failure -> incidentBehavior.createIncident(failure, activatingContext));
   }
 
   private void attemptToCreateJob(
@@ -97,8 +98,8 @@ public final class ServiceTaskProcessor implements BpmnElementProcessor<Executab
         .flatMap(ok -> eventSubscriptionBehavior.subscribeToEvents(element, context))
         .ifRightOrLeft(
             ok -> {
-              stateTransitionBehavior.transitionToActivated(context);
-              writeJobCreatedEvent(context, element, jobType, retries.intValue());
+              final var activatedContext = stateTransitionBehavior.transitionToActivated(context);
+              writeJobCreatedEvent(activatedContext, element, jobType, retries.intValue());
             },
             failure -> incidentBehavior.createIncident(failure, context));
   }
@@ -111,9 +112,9 @@ public final class ServiceTaskProcessor implements BpmnElementProcessor<Executab
         .ifRightOrLeft(
             ok -> {
               eventSubscriptionBehavior.unsubscribeFromEvents(context);
-              stateTransitionBehavior.transitionToCompleted(context);
+              final var completedContext = stateTransitionBehavior.transitionToCompleted(context);
 
-              stateTransitionBehavior.takeOutgoingSequenceFlows(element, context);
+              stateTransitionBehavior.takeOutgoingSequenceFlows(element, completedContext);
             },
             failure -> incidentBehavior.createIncident(failure, context));
   }
@@ -130,13 +131,13 @@ public final class ServiceTaskProcessor implements BpmnElementProcessor<Executab
 
     eventSubscriptionBehavior.unsubscribeFromEvents(context);
 
-    stateTransitionBehavior.transitionToTerminated(context);
+    final var terminatedContext = stateTransitionBehavior.transitionToTerminated(context);
 
-    eventSubscriptionBehavior.publishTriggeredBoundaryEvent(context);
+    eventSubscriptionBehavior.publishTriggeredBoundaryEvent(terminatedContext);
 
-    incidentBehavior.resolveIncidents(context);
+    incidentBehavior.resolveIncidents(terminatedContext);
 
-    stateTransitionBehavior.onElementTerminated(element, context);
+    stateTransitionBehavior.onElementTerminated(element, terminatedContext);
   }
 
   @Override

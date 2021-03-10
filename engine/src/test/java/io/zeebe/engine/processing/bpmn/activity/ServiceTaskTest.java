@@ -61,7 +61,7 @@ public final class ServiceTaskTest {
 
     // then
     final Record<JobRecordValue> job =
-        RecordingExporter.jobRecords(JobIntent.CREATE)
+        RecordingExporter.jobRecords(JobIntent.CREATED)
             .withProcessInstanceKey(processInstanceKey)
             .getFirst();
 
@@ -81,7 +81,7 @@ public final class ServiceTaskTest {
 
     // then
     final Record<JobRecordValue> job =
-        RecordingExporter.jobRecords(JobIntent.CREATE)
+        RecordingExporter.jobRecords(JobIntent.CREATED)
             .withProcessInstanceKey(processInstanceKey)
             .getFirst();
 
@@ -101,15 +101,17 @@ public final class ServiceTaskTest {
             RecordingExporter.processInstanceRecords()
                 .withProcessInstanceKey(processInstanceKey)
                 .withElementType(BpmnElementType.SERVICE_TASK)
-                .limit(2))
+                .limit(3))
         .extracting(Record::getIntent)
         .containsSequence(
-            ProcessInstanceIntent.ELEMENT_ACTIVATING, ProcessInstanceIntent.ELEMENT_ACTIVATED);
+            ProcessInstanceIntent.ACTIVATE_ELEMENT,
+            ProcessInstanceIntent.ELEMENT_ACTIVATING,
+            ProcessInstanceIntent.ELEMENT_ACTIVATED);
 
     final Record<ProcessInstanceRecordValue> serviceTask =
         RecordingExporter.processInstanceRecords()
             .withProcessInstanceKey(processInstanceKey)
-            .withIntent(ProcessInstanceIntent.ELEMENT_ACTIVATING)
+            .withIntent(ProcessInstanceIntent.ACTIVATE_ELEMENT)
             .withElementType(BpmnElementType.SERVICE_TASK)
             .getFirst();
 
@@ -141,7 +143,7 @@ public final class ServiceTaskTest {
             .getFirst();
 
     final Record<JobRecordValue> job =
-        RecordingExporter.jobRecords(JobIntent.CREATE)
+        RecordingExporter.jobRecords(JobIntent.CREATED)
             .withProcessInstanceKey(processInstanceKey)
             .getFirst();
 
@@ -170,7 +172,7 @@ public final class ServiceTaskTest {
 
     // then
     final Record<JobRecordValue> job =
-        RecordingExporter.jobRecords(JobIntent.CREATE)
+        RecordingExporter.jobRecords(JobIntent.CREATED)
             .withProcessInstanceKey(processInstanceKey)
             .getFirst();
 
