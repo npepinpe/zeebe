@@ -34,7 +34,7 @@ public class Ipv6IntegrationTest {
   private static final int PARTITION_COUNT = 1;
   private static final int REPLICATION_FACTOR = 3;
   private static final String ZEEBE_IMAGE_VERSION = "camunda/zeebe:current-test";
-  private static final String NETWORK_ALIAS = "test-ipv6";
+  private static final String NETWORK_ALIAS = Ipv6IntegrationTest.class.getName();
   private static final String BASE_PART_OF_SUBNET = "2081::aede:4844:fe00:";
   private static final String SUBNET = BASE_PART_OF_SUBNET + "0/123";
 
@@ -58,7 +58,7 @@ public class Ipv6IntegrationTest {
     initialContactPoints = new ArrayList<>();
     containers =
         IntStream.range(0, CLUSTER_SIZE)
-            .mapToObj(i -> new ZeebeBrokerContainer(ZEEBE_IMAGE_VERSION))
+            .mapToObj(i -> new ZeebeBrokerContainer(ZEEBE_IMAGE_VERSION).withNetwork(network))
             .collect(Collectors.toList());
 
     gateway = new ZeebeGatewayContainer(ZEEBE_IMAGE_VERSION);
@@ -92,7 +92,7 @@ public class Ipv6IntegrationTest {
   private void configureBrokerContainer(final int index, final List<ZeebeBrokerContainer> brokers) {
     final int clusterSize = brokers.size();
     final var broker = brokers.get(index);
-    final var hostNameWithoutBraces = String.format("%s%d", BASE_PART_OF_SUBNET, index + 2);
+    final var hostNameWithoutBraces = getIpv6AddressForIndex(index);
     final var hostName = String.format("[%s]", hostNameWithoutBraces);
 
     initialContactPoints.add(hostName + ":" + ZeebePort.INTERNAL.getPort());
@@ -112,16 +112,16 @@ public class Ipv6IntegrationTest {
         .withEnv("ZEEBE_BROKER_CLUSTER_PARTITIONCOUNT", String.valueOf(PARTITION_COUNT))
         .withEnv(
             "ZEEBE_BROKER_CLUSTER_INITIALCONTACTPOINTS", String.join(",", initialContactPoints))
-        .withEnv("ZEEBE_BROKER_NETWORK_COMMANDAPI_ADVERTISEDHOST", hostNameWithoutBraces)
-        .withEnv("ZEEBE_BROKER_NETWORK_INTERNALAPI_ADVERTISEDHOST", hostNameWithoutBraces)
-        .withEnv("ZEEBE_BROKER_NETWORK_MONITORINGAPI_ADVERTISEDHOST", hostNameWithoutBraces)
+        .withEnv("ZEEBE_BROKER_NETWORK_ADVERTISEDHOST", hostNameWithoutBraces)
+        .withEnv("ZEEBE_LOG_LEVEL", "DEBUG")
+        .withEnv("ZEEBE_BROKER_NETWORK_HOST", "::")
         .withEnv("ZEEBE_LOG_LEVEL", "DEBUG")
         .withEnv("ATOMIX_LOG_LEVEL", "INFO");
   }
 
   private void configureGatewayContainer(
       final ZeebeGatewayContainer gateway, final String initialContactPoint) {
-    final String address = String.format("%s%d", BASE_PART_OF_SUBNET, CLUSTER_SIZE + 2);
+    final String address = getIpv6AddressForIndex(CLUSTER_SIZE);
     gateway
         .withEnv("ZEEBE_GATEWAY_CLUSTER_CONTACTPOINT", initialContactPoint)
         .withTopologyCheck(
@@ -131,8 +131,15 @@ public class Ipv6IntegrationTest {
                 .forReplicationFactor(REPLICATION_FACTOR))
         .withNetwork(network)
         .withNetworkAliases(NETWORK_ALIAS)
+        .withEnv("ZEEBE_GATEWAY_NETWORK_HOST", "::")
         .withCreateContainerCmdModifier(
             createContainerCmd ->
                 createContainerCmd.withIpv6Address(address).withHostName(address));
+  }
+
+  private String getIpv6AddressForIndex(final int index) {
+    // offset the index by 2 as indexes start at 0, and :1 is the gateway, so the first address
+    // should start at :2
+    return String.format("%s%d", BASE_PART_OF_SUBNET, index + 2);
   }
 }
