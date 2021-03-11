@@ -7,6 +7,7 @@
  */
 package io.zeebe.engine.state.appliers;
 
+import io.zeebe.engine.processing.deployment.model.element.ExecutableCatchEventSupplier;
 import io.zeebe.engine.processing.deployment.model.element.ExecutableFlowElementContainer;
 import io.zeebe.engine.state.TypedEventApplier;
 import io.zeebe.engine.state.immutable.ProcessState;
@@ -38,6 +39,21 @@ final class ProcessInstanceElementActivatedApplier
     elementInstanceState.updateInstance(
         key, instance -> instance.setState(ProcessInstanceIntent.ELEMENT_ACTIVATED));
 
+    //    var flowElement = processState.getFlowElement(
+    //        value.getProcessKey(),
+    //        value.getElementIdBuffer(),
+    //        ExecutableFlowElement.class);
+
+    //    if (flowElement instanceof ExecutableCatchEventSupplier) {
+    //      final var executableCatchEventSupplier = (ExecutableCatchEventSupplier)flowElement;
+    //      final var events = executableCatchEventSupplier.getEvents();
+    //      if (!events.isEmpty()) {
+    //        eventScopeInstanceState.createIfNotExists(
+    //            key, executableCatchEventSupplier.getInterruptingElementIds());
+    //      }
+    //    }
+
+    // TODO simplify code (see e.g. example above)
     if (value.getBpmnElementType() == BpmnElementType.SUB_PROCESS) {
 
       final var executableFlowElementContainer =
@@ -50,6 +66,19 @@ final class ProcessInstanceElementActivatedApplier
       if (!events.isEmpty()) {
         eventScopeInstanceState.createIfNotExists(
             key, executableFlowElementContainer.getInterruptingElementIds());
+      }
+    } else if (value.getBpmnElementType() == BpmnElementType.SERVICE_TASK) {
+
+      final var executableCatchEventSupplier =
+          processState.getFlowElement(
+              value.getProcessDefinitionKey(),
+              value.getElementIdBuffer(),
+              ExecutableCatchEventSupplier.class);
+
+      final var events = executableCatchEventSupplier.getEvents();
+      if (!events.isEmpty()) {
+        eventScopeInstanceState.createIfNotExists(
+            key, executableCatchEventSupplier.getInterruptingElementIds());
       }
     }
   }
