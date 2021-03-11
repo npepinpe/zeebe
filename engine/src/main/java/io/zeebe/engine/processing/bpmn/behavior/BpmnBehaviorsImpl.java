@@ -37,6 +37,7 @@ public final class BpmnBehaviorsImpl implements BpmnBehaviors {
   private final TypedStreamWriter streamWriter;
   private final BpmnProcessResultSenderBehavior processResultSenderBehavior;
   private final BpmnBufferedMessageStartEventBehavior bufferedMessageStartEventBehavior;
+  private final BpmnJobBehavior jobBehavior;
 
   public BpmnBehaviorsImpl(
       final ExpressionProcessor expressionBehavior,
@@ -85,6 +86,13 @@ public final class BpmnBehaviorsImpl implements BpmnBehaviors {
     processResultSenderBehavior = new BpmnProcessResultSenderBehavior(zeebeState, responseWriter);
     bufferedMessageStartEventBehavior =
         new BpmnBufferedMessageStartEventBehavior(zeebeState, writers);
+    jobBehavior =
+        new BpmnJobBehavior(
+            zeebeState,
+            zeebeState.getKeyGenerator(),
+            writers.state(),
+            writers.command(),
+            incidentBehavior);
   }
 
   @Override
@@ -145,5 +153,10 @@ public final class BpmnBehaviorsImpl implements BpmnBehaviors {
   @Override
   public BpmnBufferedMessageStartEventBehavior bufferedMessageStartEventBehavior() {
     return bufferedMessageStartEventBehavior;
+  }
+
+  @Override
+  public BpmnJobBehavior jobBehavior() {
+    return jobBehavior;
   }
 }

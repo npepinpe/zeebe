@@ -24,7 +24,6 @@ import io.zeebe.engine.processing.bpmn.task.ReceiveTaskProcessor;
 import io.zeebe.engine.processing.bpmn.task.ServiceTaskProcessor;
 import io.zeebe.engine.processing.deployment.model.element.ExecutableFlowElement;
 import io.zeebe.engine.processing.streamprocessor.writers.Writers;
-import io.zeebe.engine.state.mutable.MutableZeebeState;
 import io.zeebe.protocol.record.value.BpmnElementType;
 import java.util.EnumMap;
 import java.util.Map;
@@ -34,18 +33,11 @@ public final class BpmnElementProcessors {
   private final Map<BpmnElementType, BpmnElementProcessor<?>> processors =
       new EnumMap<>(BpmnElementType.class);
 
-  public BpmnElementProcessors(
-      final BpmnBehaviors bpmnBehaviors,
-      final Writers writers,
-      final MutableZeebeState zeebeState) {
+  public BpmnElementProcessors(final BpmnBehaviors bpmnBehaviors, final Writers writers) {
     // tasks
-    processors.put(
-        BpmnElementType.SERVICE_TASK,
-        new ServiceTaskProcessor(bpmnBehaviors, writers, zeebeState, zeebeState.getKeyGenerator()));
+    processors.put(BpmnElementType.SERVICE_TASK, new ServiceTaskProcessor(bpmnBehaviors));
     processors.put(BpmnElementType.RECEIVE_TASK, new ReceiveTaskProcessor(bpmnBehaviors));
-    processors.put(
-        BpmnElementType.USER_TASK,
-        new ServiceTaskProcessor(bpmnBehaviors, writers, zeebeState, zeebeState.getKeyGenerator()));
+    processors.put(BpmnElementType.USER_TASK, new ServiceTaskProcessor(bpmnBehaviors));
 
     // gateways
     processors.put(BpmnElementType.EXCLUSIVE_GATEWAY, new ExclusiveGatewayProcessor(bpmnBehaviors));
