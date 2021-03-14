@@ -97,6 +97,10 @@ public final class Address {
     }
   }
 
+  public static Address from(final InetSocketAddress inetSocketAddress) {
+    return from(inetSocketAddress.getHostString(), inetSocketAddress.getPort());
+  }
+
   /** Returns the local host. */
   private static InetAddress getLocalAddress() throws UnknownHostException {
     try {

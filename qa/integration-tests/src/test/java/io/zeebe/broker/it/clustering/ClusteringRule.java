@@ -203,7 +203,8 @@ public final class ClusteringRule extends ExternalResource {
             .map(BrokerCfg::getNetwork)
             .map(NetworkCfg::getInternalApi)
             .map(SocketBindingCfg::getAddress)
-            .map(io.zeebe.util.SocketUtil::toHostAndPortString)
+            .map(Address::from)
+            .map(Address::toString)
             .toArray(String[]::new);
 
     for (int nodeId = 0; nodeId < clusterSize; nodeId++) {
@@ -305,8 +306,7 @@ public final class ClusteringRule extends ExternalResource {
       // https://github.com/zeebe-io/zeebe/issues/2012
 
       setInitialContactPoints(
-              io.zeebe.util.SocketUtil.toHostAndPortString(
-                  getBrokerCfg(0).getNetwork().getInternalApi().getAddress()))
+              Address.from(getBrokerCfg(0).getNetwork().getInternalApi().getAddress()).toString())
           .accept(brokerCfg);
     }
 
@@ -330,8 +330,7 @@ public final class ClusteringRule extends ExternalResource {
 
   private Gateway createGateway() {
     final String contactPoint =
-        io.zeebe.util.SocketUtil.toHostAndPortString(
-            getBrokerCfg(0).getNetwork().getInternalApi().getAddress());
+        Address.from(getBrokerCfg(0).getNetwork().getInternalApi().getAddress()).toString();
 
     final GatewayCfg gatewayCfg = new GatewayCfg();
     gatewayCfg.getCluster().setContactPoint(contactPoint).setClusterName(clusterName);
@@ -375,8 +374,7 @@ public final class ClusteringRule extends ExternalResource {
 
   private ZeebeClient createClient() {
     final String contactPoint =
-        io.zeebe.util.SocketUtil.toHostAndPortString(
-            gateway.getGatewayCfg().getNetwork().toSocketAddress());
+        Address.from(gateway.getGatewayCfg().getNetwork().toSocketAddress()).toString();
     final ZeebeClientBuilder zeebeClientBuilder =
         ZeebeClient.newClientBuilder().gatewayAddress(contactPoint);
 
