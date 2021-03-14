@@ -30,6 +30,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 
 public class Ipv6IntegrationTest {
+
   private static final int CLUSTER_SIZE = 3;
   private static final int PARTITION_COUNT = 1;
   private static final int REPLICATION_FACTOR = 3;
@@ -37,6 +38,7 @@ public class Ipv6IntegrationTest {
   private static final String NETWORK_ALIAS = Ipv6IntegrationTest.class.getName();
   private static final String BASE_PART_OF_SUBNET = "2081::aede:4844:fe00:";
   private static final String SUBNET = BASE_PART_OF_SUBNET + "0/123";
+  private static final String INADDR6_ANY = "[::]";
 
   @Rule
   public final Network network =
@@ -114,7 +116,7 @@ public class Ipv6IntegrationTest {
             "ZEEBE_BROKER_CLUSTER_INITIALCONTACTPOINTS", String.join(",", initialContactPoints))
         .withEnv("ZEEBE_BROKER_NETWORK_ADVERTISEDHOST", hostNameWithoutBraces)
         .withEnv("ZEEBE_LOG_LEVEL", "DEBUG")
-        .withEnv("ZEEBE_BROKER_NETWORK_HOST", "::")
+        .withEnv("ZEEBE_BROKER_NETWORK_HOST", INADDR6_ANY)
         .withEnv("ZEEBE_LOG_LEVEL", "DEBUG")
         .withEnv("ATOMIX_LOG_LEVEL", "INFO");
   }
@@ -131,7 +133,8 @@ public class Ipv6IntegrationTest {
                 .forReplicationFactor(REPLICATION_FACTOR))
         .withNetwork(network)
         .withNetworkAliases(NETWORK_ALIAS)
-        .withEnv("ZEEBE_GATEWAY_NETWORK_HOST", "::")
+        .withEnv("ZEEBE_GATEWAY_NETWORK_HOST", INADDR6_ANY)
+        .withEnv("ZEEBE_GATEWAY_CLUSTER_HOST", address)
         .withCreateContainerCmdModifier(
             createContainerCmd ->
                 createContainerCmd.withIpv6Address(address).withHostName(address));
