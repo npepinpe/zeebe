@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/pb"
 	"github.com/spf13/cobra"
+	"net"
 	"sort"
 	"strings"
 )
@@ -48,8 +49,10 @@ func (s StatusResponseWrapper) human() (string, error) {
 	sort.Sort(ByNodeID(resp.Brokers))
 
 	for b, broker := range resp.Brokers {
-		stringBuilder.WriteString(fmt.Sprintf("  Broker %d - %s:%d\n", broker.NodeId, broker.Host, broker.Port))
-
+		stringBuilder.WriteString(fmt.Sprintf("  Broker %d - %s:%d\n",
+			broker.NodeId,
+			formatIPAddress(broker.Host),
+			broker.Port))
 		version := "unavailable"
 		if broker.Version != "" {
 			version = broker.Version
@@ -135,4 +138,12 @@ func healthToString(health pb.Partition_PartitionBrokerHealth) string {
 	default:
 		return unknownState
 	}
+}
+
+func formatIPAddress(ipAddress string) string {
+	ip := net.ParseIP(ipAddress)
+	if ip.To4() != nil {
+		return ip.String()
+	}
+	return fmt.Sprintf("[%s]", ip.String())
 }
