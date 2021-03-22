@@ -101,7 +101,7 @@ public final class AtomixRule extends ExternalResource {
         memberId,
         newId -> {
           final var nextInetAddress = SocketUtil.getNextAddress();
-          final var addressString = Address.from(nextInetAddress).toString();
+          final var addressString = io.zeebe.util.SocketUtil.toHostAndPortString(nextInetAddress);
           return Address.from(addressString);
         });
   }

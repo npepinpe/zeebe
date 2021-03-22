@@ -76,6 +76,7 @@ import io.zeebe.snapshots.broker.impl.FileBasedSnapshotStoreFactory;
 import io.zeebe.transport.ServerTransport;
 import io.zeebe.transport.TransportFactory;
 import io.zeebe.util.LogUtil;
+import io.zeebe.util.SocketUtil;
 import io.zeebe.util.VersionUtil;
 import io.zeebe.util.exception.UncheckedExecutionException;
 import io.zeebe.util.sched.Actor;
@@ -198,7 +199,7 @@ public final class Broker implements AutoCloseable {
     final BrokerInfo localBroker =
         new BrokerInfo(
             clusterCfg.getNodeId(),
-            Address.from(networkCfg.getCommandApi().getAdvertisedAddress()).toString());
+            SocketUtil.toHostAndPortString(networkCfg.getCommandApi().getAdvertisedAddress()));
 
     final StartProcess startContext = new StartProcess("Broker-" + localBroker.getNodeId());
 

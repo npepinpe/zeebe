@@ -12,7 +12,6 @@ import static io.zeebe.test.util.record.RecordingExporter.processInstanceRecords
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.atomix.utils.net.Address;
 import io.zeebe.broker.system.configuration.BrokerCfg;
 import io.zeebe.broker.system.configuration.ExporterCfg;
 import io.zeebe.client.ClientProperties;
@@ -30,6 +29,7 @@ import io.zeebe.test.EmbeddedBrokerRule;
 import io.zeebe.test.util.TestConfigurationFactory;
 import io.zeebe.test.util.TestUtil;
 import io.zeebe.test.util.record.RecordingExporter;
+import io.zeebe.util.SocketUtil;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.HashMap;
@@ -384,7 +384,8 @@ public class ExporterIntegrationRule extends ExternalResource {
     final Properties properties = new Properties();
     properties.put(
         ClientProperties.GATEWAY_ADDRESS,
-        Address.from(getBrokerConfig().getGateway().getNetwork().toSocketAddress()).toString());
+        SocketUtil.toHostAndPortString(
+            getBrokerConfig().getGateway().getNetwork().toSocketAddress()));
     properties.put(ClientProperties.USE_PLAINTEXT_CONNECTION, "true");
 
     return properties;

@@ -11,7 +11,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import io.atomix.cluster.AtomixCluster;
-import io.atomix.utils.net.Address;
 import io.grpc.Status.Code;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.ZeebeFuture;
@@ -57,7 +56,8 @@ class UnavailableBrokersTest {
     gateway = new Gateway(new GatewayCfg().setNetwork(networkCfg), cluster, actorScheduler);
     gateway.start();
 
-    final String gatewayAddress = Address.from(networkCfg.toSocketAddress()).toString();
+    final String gatewayAddress =
+        io.zeebe.util.SocketUtil.toHostAndPortString(networkCfg.toSocketAddress());
     client = ZeebeClient.newClientBuilder().gatewayAddress(gatewayAddress).usePlaintext().build();
   }
 

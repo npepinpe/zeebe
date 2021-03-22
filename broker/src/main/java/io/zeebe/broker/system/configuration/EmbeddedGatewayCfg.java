@@ -7,8 +7,8 @@
  */
 package io.zeebe.broker.system.configuration;
 
-import io.atomix.utils.net.Address;
 import io.zeebe.gateway.impl.configuration.GatewayCfg;
+import io.zeebe.util.SocketUtil;
 
 public final class EmbeddedGatewayCfg extends GatewayCfg implements ConfigurationEntry {
 
@@ -23,7 +23,8 @@ public final class EmbeddedGatewayCfg extends GatewayCfg implements Configuratio
     init(networkCfg.getHost());
 
     // ensure embedded gateway can access local broker
-    getCluster().setContactPoint(Address.from(networkCfg.getInternalApi().getAddress()).toString());
+    getCluster()
+        .setContactPoint(SocketUtil.toHostAndPortString(networkCfg.getInternalApi().getAddress()));
 
     // configure embedded gateway based on broker config
     getNetwork().setPort(getNetwork().getPort() + (networkCfg.getPortOffset() * 10));

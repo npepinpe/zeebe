@@ -13,7 +13,6 @@ import io.atomix.primitive.partition.PartitionId;
 import io.atomix.raft.partition.RaftPartition;
 import io.atomix.raft.storage.log.RaftLogReader;
 import io.atomix.raft.storage.log.RaftLogReader.Mode;
-import io.atomix.utils.net.Address;
 import io.zeebe.broker.clustering.atomix.AtomixFactory;
 import io.zeebe.broker.system.management.BrokerAdminService;
 import io.zeebe.broker.system.management.PartitionStatus;
@@ -53,7 +52,8 @@ public class BrokerSnapshotTest {
     journalReader = raftPartition.getServer().openReader(1, Mode.COMMITS);
     brokerAdminService = brokerRule.getBroker().getBrokerAdminService();
 
-    final String contactPoint = Address.from(brokerRule.getGatewayAddress()).toString();
+    final String contactPoint =
+        io.zeebe.util.SocketUtil.toHostAndPortString(brokerRule.getGatewayAddress());
     final ZeebeClientBuilder zeebeClientBuilder =
         ZeebeClient.newClientBuilder().usePlaintext().gatewayAddress(contactPoint);
     client = zeebeClientBuilder.build();

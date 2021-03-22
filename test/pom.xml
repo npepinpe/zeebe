@@ -65,11 +65,6 @@
 
     <dependency>
       <groupId>io.zeebe</groupId>
-      <artifactId>atomix-utils</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>io.zeebe</groupId>
       <artifactId>zeebe-test-util</artifactId>
     </dependency>
 
