@@ -175,6 +175,7 @@ func (s *ContainerSuite) SetupSuite() {
 			Image:        s.ContainerImage,
 			ExposedPorts: []string{"26500"},
 			WaitingFor:   zeebeWaitStrategy{waitTime: s.WaitTime},
+			Env:          map[string]string{"ZEEBE_HOST": "0.0.0.0"},
 		},
 		Started: true,
 	}

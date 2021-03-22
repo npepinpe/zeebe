@@ -40,11 +40,6 @@ const (
 	// NOTE: taken from https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
 	semVer = `(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*` +
 		`|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?`
-
-	ipv6Regex         = `(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))`
-	ipv6RegexWithPort = `\[(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))]`
-	ipv4Regex         = `(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4})`
-	ipRegex           = ipv6Regex + `|` + ipv6RegexWithPort + `|` + ipv4Regex
 )
 
 type integrationTestSuite struct {
@@ -188,7 +183,7 @@ func assertEqText(t *testing.T, test testCase, golden, cmdOut []byte) {
 	wantLines := strings.Split(string(golden), "\n")
 	gotLines := strings.Split(string(cmdOut), "\n")
 
-	if diff := cmp.Diff(wantLines, gotLines, cmp.Comparer(composeComparer(cmpIgnoreNums, cmpIgnoreVersion, cmpIgnoreIps))); diff != "" {
+	if diff := cmp.Diff(wantLines, gotLines, cmp.Comparer(composeComparer(cmpIgnoreNums, cmpIgnoreVersion))); diff != "" {
 		t.Fatalf("%s: diff (-want +got):\n%s", test.name, diff)
 	}
 }
@@ -197,13 +192,8 @@ func assertEqJSON(t *testing.T, test testCase, golden, cmdOut []byte) {
 	want := string(golden)
 	got := string(cmdOut)
 
-	// remove ips
-	ignorePattern := regexp.MustCompile(ipRegex)
-	want = ignorePattern.ReplaceAllString(want, "")
-	got = ignorePattern.ReplaceAllString(got, "")
-
 	// remove versions
-	ignorePattern = regexp.MustCompile(semVer)
+	ignorePattern := regexp.MustCompile(semVer)
 	want = ignorePattern.ReplaceAllString(want, "")
 	got = ignorePattern.ReplaceAllString(got, "")
 
@@ -240,15 +230,6 @@ func cmpIgnoreNums(x, y string) bool {
 	newX := numbersRegex.ReplaceAllString(x, "")
 	newY := numbersRegex.ReplaceAllString(y, "")
 
-	return newX == newY
-}
-
-func cmpIgnoreIps(x, y string) bool {
-	ipRegex := regexp.MustCompile(ipRegex)
-	newX := ipRegex.ReplaceAllString(x, "0.0.0.0")
-	newY := ipRegex.ReplaceAllString(y, "0.0.0.0")
-
-	fmt.Printf("NewX: %s, NewY: %s\n", newX, newY)
 	return newX == newY
 }
 
