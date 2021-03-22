@@ -7,15 +7,18 @@
  */
 package io.zeebe.util;
 
+import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 
 public final class SocketUtil {
-  private static final String HOST_PORT_FORMAT = "%s:%d";
+  private static final String DEFAULT_FORMAT = "%s:%d";
+  private static final String IPV6_FORMAT = "[%s]:%d";
 
   private SocketUtil() {}
 
   public static String toHostAndPortString(InetSocketAddress inetSocketAddress) {
-    return String.format(
-        HOST_PORT_FORMAT, inetSocketAddress.getHostString(), inetSocketAddress.getPort());
+    final String format =
+        inetSocketAddress.getAddress() instanceof Inet6Address ? IPV6_FORMAT : DEFAULT_FORMAT;
+    return String.format(format, inetSocketAddress.getHostString(), inetSocketAddress.getPort());
   }
 }
