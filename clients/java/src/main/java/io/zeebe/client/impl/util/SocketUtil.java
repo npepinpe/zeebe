@@ -19,6 +19,10 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+/**
+ * This class is the replica of {@link io.zeebe.util.SocketUtil} because zeebe-util uses JDK 11, but
+ * the java client module uses JDK 8. TODO: If these classes will grow up consider deduplicate them.
+ */
 public final class SocketUtil {
   private static final String DEFAULT_FORMAT = "%s:%d";
   private static final String IPV6_FORMAT = "[%s]:%d";
