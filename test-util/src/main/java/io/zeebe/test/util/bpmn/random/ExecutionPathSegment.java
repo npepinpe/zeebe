@@ -60,19 +60,17 @@ public final class ExecutionPathSegment {
   public void append(final ExecutionPathSegment pathToAdd) {
     variables.putAll(pathToAdd.variables);
 
-    pathToAdd
-        .getScheduledSteps()
-        .forEach(
-            scheduledExecutionStep -> {
-              final var logicalPredecessor = scheduledExecutionStep.getLogicalPredecessor();
+    pathToAdd.getScheduledSteps().forEach(this::append);
+  }
 
-              if (logicalPredecessor == null) {
-                append(scheduledExecutionStep.getStep());
-              } else {
+  public void append(final ScheduledExecutionStep scheduledExecutionStep) {
+    final var logicalPredecessor = scheduledExecutionStep.getLogicalPredecessor();
 
-                append(scheduledExecutionStep.getStep(), logicalPredecessor.getStep());
-              }
-            });
+    if (logicalPredecessor == null) {
+      append(scheduledExecutionStep.getStep());
+    } else {
+      append(scheduledExecutionStep.getStep(), logicalPredecessor.getStep());
+    }
   }
 
   public List<ScheduledExecutionStep> getScheduledSteps() {

@@ -15,6 +15,7 @@ import io.zeebe.test.util.bpmn.random.BlockBuilderFactory;
 import io.zeebe.test.util.bpmn.random.ConstructionContext;
 import io.zeebe.test.util.bpmn.random.ExecutionPathSegment;
 import io.zeebe.test.util.bpmn.random.IDGenerator;
+import io.zeebe.test.util.bpmn.random.ScheduledExecutionStep;
 import io.zeebe.test.util.bpmn.random.steps.StepActivateBPMNElement;
 import io.zeebe.test.util.bpmn.random.steps.StepCompleteBPMNElement;
 import java.util.ArrayList;
@@ -87,7 +88,7 @@ public class ParallelGatewayBlockBuilder implements BlockBuilder {
                 blockBuilder -> {
                   final var branchExecutionPath = blockBuilder.findRandomExecutionPath(random);
                   result.mergeVariableDefaults(branchExecutionPath);
-                  return new BranchPointer(forkingGateway, branchExecutionPath.getSteps());
+                  return new BranchPointer(branchExecutionPath.getScheduledSteps());
                 })
             .collect(Collectors.toList());
 
@@ -122,14 +123,7 @@ public class ParallelGatewayBlockBuilder implements BlockBuilder {
 
   private void takeNextItemAndAppendToExecutionPath(
       final ExecutionPathSegment executionPath, final BranchPointer branchPointer) {
-    final var remainingSteps = branchPointer.getRemainingSteps();
-    final var logicalPredecessor = branchPointer.getLogicalPredecessor();
-
-    final AbstractExecutionStep nextStep = remainingSteps.remove(0);
-
-    executionPath.append(nextStep, logicalPredecessor);
-
-    branchPointer.setLogicalPredecessor(nextStep);
+    executionPath.append(branchPointer.getRemainingSteps().remove(0));
   }
 
   /**
@@ -139,7 +133,7 @@ public class ParallelGatewayBlockBuilder implements BlockBuilder {
   private void copyAutomaticSteps(
       final BranchPointer branchPointer, final ExecutionPathSegment executionPath) {
     while (branchPointer.remainingSteps.size() > 0
-        && branchPointer.remainingSteps.get(0).isAutomatic()) {
+        && branchPointer.remainingSteps.get(0).getStep().isAutomatic()) {
       takeNextItemAndAppendToExecutionPath(executionPath, branchPointer);
     }
   }
@@ -163,27 +157,16 @@ public class ParallelGatewayBlockBuilder implements BlockBuilder {
 
   private static final class BranchPointer {
 
-    private AbstractExecutionStep logicalPredecessor;
+    private AbstractExecutionStep branchPredecessor;
 
-    private final List<AbstractExecutionStep> remainingSteps;
+    private final List<ScheduledExecutionStep> remainingSteps;
 
-    private BranchPointer(
-        final AbstractExecutionStep logicalPredecessor,
-        final List<AbstractExecutionStep> remainingSteps) {
-      this.logicalPredecessor = logicalPredecessor;
-      this.remainingSteps = remainingSteps;
+    private BranchPointer(final List<ScheduledExecutionStep> remainingSteps) {
+      this.remainingSteps = new ArrayList<>(remainingSteps);
     }
 
-    private List<AbstractExecutionStep> getRemainingSteps() {
+    private List<ScheduledExecutionStep> getRemainingSteps() {
       return remainingSteps;
-    }
-
-    private AbstractExecutionStep getLogicalPredecessor() {
-      return logicalPredecessor;
-    }
-
-    private void setLogicalPredecessor(final AbstractExecutionStep logicalPredecessor) {
-      this.logicalPredecessor = logicalPredecessor;
     }
 
     private boolean isEmpty() {
