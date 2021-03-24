@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
@@ -99,6 +100,19 @@ public final class ExecutionPathSegment {
     steps.forEach(step -> result.putAll(step.getVariables()));
 
     return result;
+  }
+
+  public boolean canBeInterrupted() {
+    if (steps.isEmpty()) {
+      return false;
+    }
+
+    return steps.stream()
+            .map(ScheduledExecutionStep::getStep)
+            .filter(Predicate.not(AbstractExecutionStep::isAutomatic))
+            .collect(Collectors.toList())
+            .size()
+        > 1;
   }
 
   @Override

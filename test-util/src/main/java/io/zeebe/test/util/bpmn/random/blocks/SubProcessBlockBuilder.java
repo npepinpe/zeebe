@@ -118,7 +118,7 @@ public class SubProcessBlockBuilder implements BlockBuilder {
 
     final var internalExecutionPath = embeddedSubProcessBuilder.findRandomExecutionPath(random);
 
-    if (internalExecutionPath.getScheduledSteps().isEmpty()) {
+    if (!internalExecutionPath.canBeInterrupted()) {
       return result;
     }
 
