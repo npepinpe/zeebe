@@ -143,7 +143,6 @@ func healthToString(health pb.Partition_PartitionBrokerHealth) string {
 func formatHost(host string) string {
 	ips, err := net.LookupIP(host)
 	if err != nil || len(ips) > 0 {
-		// this means that the host is not an IPv4 or IPv6 address
 		return host
 	}
 	ip := net.ParseIP(host)
