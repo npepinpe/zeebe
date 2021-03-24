@@ -368,13 +368,14 @@ public class InterruptingEventSubprocessTest {
         RecordingExporter.processInstanceRecords()
             .withProcessInstanceKey(processInstanceKey)
             .filter(r -> r.getValue().getElementId().startsWith("event_sub_"))
-            .limit(13)
+            .limit(15)
             .asList();
 
     assertThat(events)
         .extracting(Record::getIntent, e -> e.getValue().getElementId())
         .containsExactly(
             tuple(ProcessInstanceIntent.EVENT_OCCURRED, "event_sub_start"),
+            tuple(ProcessInstanceIntent.ACTIVATE_ELEMENT, "event_sub_proc"),
             tuple(ProcessInstanceIntent.ELEMENT_ACTIVATING, "event_sub_proc"),
             tuple(ProcessInstanceIntent.ELEMENT_ACTIVATED, "event_sub_proc"),
             tuple(ProcessInstanceIntent.ELEMENT_ACTIVATING, "event_sub_start"),
@@ -385,6 +386,7 @@ public class InterruptingEventSubprocessTest {
             tuple(ProcessInstanceIntent.ELEMENT_ACTIVATED, "event_sub_end"),
             tuple(ProcessInstanceIntent.ELEMENT_COMPLETING, "event_sub_end"),
             tuple(ProcessInstanceIntent.ELEMENT_COMPLETED, "event_sub_end"),
+            tuple(ProcessInstanceIntent.COMPLETE_ELEMENT, "event_sub_proc"),
             tuple(ProcessInstanceIntent.ELEMENT_COMPLETING, "event_sub_proc"),
             tuple(ProcessInstanceIntent.ELEMENT_COMPLETED, "event_sub_proc"));
   }

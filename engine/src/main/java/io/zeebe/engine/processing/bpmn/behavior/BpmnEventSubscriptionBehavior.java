@@ -468,10 +468,8 @@ public final class BpmnEventSubscriptionBehavior {
                 final var elementInstanceKey = record.getKey();
                 final var interruptingRecord = record.getValue();
 
-                stateWriter.appendFollowUpEvent(
-                    elementInstanceKey,
-                    ProcessInstanceIntent.ELEMENT_ACTIVATING,
-                    interruptingRecord);
+                commandWriter.appendFollowUpCommand(
+                    elementInstanceKey, ProcessInstanceIntent.ACTIVATE_ELEMENT, interruptingRecord);
               });
     }
   }

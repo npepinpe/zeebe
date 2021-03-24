@@ -83,6 +83,7 @@ public final class ProcessInstanceStateTransitionGuard {
         return hasElementInstanceWithState(context, ProcessInstanceIntent.ELEMENT_ACTIVATED);
 
       case ACTIVATE_ELEMENT:
+        return Either.right(null);
       case SEQUENCE_FLOW_TAKEN:
         return hasActiveFlowScopeInstance(context);
 
@@ -187,6 +188,14 @@ public final class ProcessInstanceStateTransitionGuard {
                   hasFlowScopeInstanceInState(
                       flowScopeInstance, ProcessInstanceIntent.ELEMENT_ACTIVATED))
           .flatMap(flowScopeInstance -> hasNonInterruptedFlowScope(flowScopeInstance, context));
+      //          .map(
+      //              msg -> {
+      //                if (context.getBpmnElementType() != BpmnElementType.SUB_PROCESS) {
+      //                  return Either.left(msg);
+      //                }
+      //                // event sub process
+      //                return Either.right(null);
+      //              });
     }
   }
 

@@ -98,6 +98,13 @@ public final class BpmnStateTransitionBehavior {
     return transitionedContext;
   }
 
+  public void completeTransition(final BpmnElementContext context) {
+    commandWriter.appendFollowUpCommand(
+        context.getElementInstanceKey(),
+        ProcessInstanceIntent.COMPLETE_ELEMENT,
+        context.getRecordValue());
+  }
+
   /** @return context with updated intent */
   public BpmnElementContext transitionToCompleting(final BpmnElementContext context) {
     if (MigratedStreamProcessors.isMigrated(context.getBpmnElementType())) {
