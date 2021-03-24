@@ -16,6 +16,7 @@
 package io.zeebe.client.impl.util;
 
 import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 public final class SocketUtil {
@@ -26,7 +27,16 @@ public final class SocketUtil {
 
   public static String toHostAndPortString(InetSocketAddress inetSocketAddress) {
     final String format =
-        inetSocketAddress.getAddress() instanceof Inet6Address ? IPV6_FORMAT : DEFAULT_FORMAT;
+        isHostOrIpv4Address(inetSocketAddress.getAddress()) ? DEFAULT_FORMAT : IPV6_FORMAT;
     return String.format(format, inetSocketAddress.getHostString(), inetSocketAddress.getPort());
+  }
+
+  private static boolean isHostOrIpv4Address(final InetAddress address) {
+    if (address != null) {
+      return !(address instanceof Inet6Address)
+          || !address.getHostAddress().equals(address.getHostName());
+    } else {
+      return true;
+    }
   }
 }

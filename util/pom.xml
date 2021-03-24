@@ -102,5 +102,16 @@
         <filtering>true</filtering>
       </resource>
     </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration combine.children="append">
+          <argLine combine.children="append">
+            -Djdk.net.hosts.file=src/test/resources/test-hosts
+          </argLine>
+        </configuration>
+      </plugin>
+    </plugins>
   </build>
 </project>
