@@ -163,6 +163,9 @@ public final class ElementInstance extends UnpackedObject implements DbValue {
 
   public void decrementActiveSequenceFlows() {
     final var decrement = activeSequenceFlowsProp.decrement();
+    //    Loggers.STREAM_PROCESSING.error(
+    //        "Dec seq by 1, now {}", activeSequenceFlowsProp.getValue(), new
+    // Exception("exepected"));
 
     if (decrement < 0) {
       throw new IllegalStateException(
@@ -172,6 +175,10 @@ public final class ElementInstance extends UnpackedObject implements DbValue {
 
   public void incrementActiveSequenceFlows() {
     activeSequenceFlowsProp.increment();
+    //    Loggers.STREAM_PROCESSING.error(
+    //        "Increment seq by 1, now {}",
+    //        activeSequenceFlowsProp.getValue(),
+    //        new Exception("exepected"));
   }
 
   public void resetActiveSequenceFlows() {

@@ -222,8 +222,13 @@ public final class BpmnStateTransitionBehavior {
 
     final var childInstanceKey = keyGenerator.nextKey();
 
-    stateWriter.appendFollowUpEvent(
-        childInstanceKey, ProcessInstanceIntent.ELEMENT_ACTIVATING, childInstanceRecord);
+    if (MigratedStreamProcessors.isMigrated(context.getBpmnElementType())) {
+      commandWriter.appendFollowUpCommand(
+          childInstanceKey, ProcessInstanceIntent.ACTIVATE_ELEMENT, childInstanceRecord);
+    } else {
+      stateWriter.appendFollowUpEvent(
+          childInstanceKey, ProcessInstanceIntent.ELEMENT_ACTIVATING, childInstanceRecord);
+    }
 
     return childInstanceKey;
   }

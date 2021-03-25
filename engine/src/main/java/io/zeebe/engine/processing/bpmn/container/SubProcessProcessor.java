@@ -114,7 +114,7 @@ public final class SubProcessProcessor
       final BpmnElementContext childContext) {
 
     if (stateBehavior.canBeCompleted(childContext)) {
-      stateTransitionBehavior.completeTransition(flowScopeContext);
+      stateTransitionBehavior.completeElement(flowScopeContext);
     }
   }
 
