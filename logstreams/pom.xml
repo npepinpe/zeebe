@@ -94,6 +94,10 @@
       <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.zeebe</groupId>
+      <artifactId>zeebe-journal</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

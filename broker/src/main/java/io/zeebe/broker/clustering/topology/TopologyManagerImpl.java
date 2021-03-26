@@ -277,6 +277,7 @@ public final class TopologyManagerImpl extends Actor
           } else if (status == HealthStatus.UNHEALTHY) {
             localBroker.setPartitionUnhealthy(partitionId);
           }
+          // TODO(6664): broadcast death status
           publishTopologyChanges();
         });
   }

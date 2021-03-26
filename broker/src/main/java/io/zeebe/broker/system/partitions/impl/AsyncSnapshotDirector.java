@@ -9,18 +9,25 @@ package io.zeebe.broker.system.partitions.impl;
 
 import io.zeebe.broker.system.partitions.StateController;
 import io.zeebe.engine.processing.streamprocessor.StreamProcessor;
+import io.zeebe.journal.file.record.CorruptedLogException;
 import io.zeebe.logstreams.impl.Loggers;
 import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.snapshots.raft.TransientSnapshot;
+import io.zeebe.util.health.FailureListener;
+import io.zeebe.util.health.HealthMonitorable;
+import io.zeebe.util.health.HealthStatus;
 import io.zeebe.util.sched.Actor;
 import io.zeebe.util.sched.ActorCondition;
 import io.zeebe.util.sched.SchedulingHints;
 import io.zeebe.util.sched.future.ActorFuture;
 import io.zeebe.util.sched.future.CompletableActorFuture;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 
-public final class AsyncSnapshotDirector extends Actor {
+public final class AsyncSnapshotDirector extends Actor implements HealthMonitorable {
 
   public static final Duration MINIMUM_SNAPSHOT_PERIOD = Duration.ofMinutes(1);
 
@@ -40,6 +47,7 @@ public final class AsyncSnapshotDirector extends Actor {
   private final String processorName;
   private final StreamProcessor streamProcessor;
   private final String actorName;
+  private final List<FailureListener> listeners = new ArrayList<>();
 
   private ActorCondition commitCondition;
   private Long lastWrittenEventPosition;
@@ -47,6 +55,7 @@ public final class AsyncSnapshotDirector extends Actor {
   private long lowerBoundSnapshotPosition;
   private boolean takingSnapshot;
   private boolean persistingSnapshot;
+  private HealthStatus status = HealthStatus.HEALTHY;
 
   public AsyncSnapshotDirector(
       final int nodeId,
@@ -149,8 +158,14 @@ public final class AsyncSnapshotDirector extends Actor {
   }
 
   private void takeSnapshot(final long initialCommitPosition) {
-    final var optionalPendingSnapshot =
-        stateController.takeTransientSnapshot(lowerBoundSnapshotPosition);
+    final Optional<TransientSnapshot> optionalPendingSnapshot;
+    try {
+      optionalPendingSnapshot = stateController.takeTransientSnapshot(lowerBoundSnapshotPosition);
+    } catch (final CorruptedLogException e) {
+      onUnrecoverableFailure(e);
+      return;
+    }
+
     if (optionalPendingSnapshot.isEmpty()) {
       takingSnapshot = false;
       return;
@@ -224,5 +239,21 @@ public final class AsyncSnapshotDirector extends Actor {
                     });
               }
             });
+  }
+
+  private void onUnrecoverableFailure(final Exception error) {
+    LOG.error("Detected unrecoverable failure: ", error);
+    status = HealthStatus.DEAD;
+    listeners.forEach(FailureListener::onUnrecoverableFailure);
+  }
+
+  @Override
+  public HealthStatus getHealthStatus() {
+    return status;
+  }
+
+  @Override
+  public void addFailureListener(final FailureListener failureListener) {
+    listeners.add(failureListener);
   }
 }

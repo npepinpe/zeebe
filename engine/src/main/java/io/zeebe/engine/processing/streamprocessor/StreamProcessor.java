@@ -14,6 +14,7 @@ import io.zeebe.engine.processing.streamprocessor.writers.TypedStreamWriterImpl;
 import io.zeebe.engine.state.EventApplier;
 import io.zeebe.engine.state.ZeebeDbState;
 import io.zeebe.engine.state.mutable.MutableZeebeState;
+import io.zeebe.journal.file.record.CorruptedLogException;
 import io.zeebe.logstreams.impl.Loggers;
 import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.logstreams.log.LogStreamBatchWriter;
@@ -140,6 +141,8 @@ public class StreamProcessor extends Actor implements HealthMonitorable {
                   .recoveryTime(System.currentTimeMillis() - startTime);
             }
           });
+    } catch (final CorruptedLogException e) {
+      onUnrecoverableFailure(e);
     } catch (final RuntimeException e) {
       onFailure(e);
     }
@@ -309,6 +312,18 @@ public class StreamProcessor extends Actor implements HealthMonitorable {
     }
     if (failureListener != null) {
       failureListener.onFailure();
+    }
+  }
+
+  private void onUnrecoverableFailure(final Exception e) {
+    LOG.error("Detected unrecoverable failure: ", e);
+
+    actor.fail();
+    if (!openFuture.isDone()) {
+      openFuture.completeExceptionally(e);
+    }
+    if (failureListener != null) {
+      failureListener.onUnrecoverableFailure();
     }
   }
 

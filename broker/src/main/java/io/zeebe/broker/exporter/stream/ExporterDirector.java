@@ -13,6 +13,7 @@ import io.zeebe.engine.processing.streamprocessor.EventFilter;
 import io.zeebe.engine.processing.streamprocessor.RecordValues;
 import io.zeebe.engine.processing.streamprocessor.TypedEventImpl;
 import io.zeebe.exporter.api.context.Context;
+import io.zeebe.journal.file.record.CorruptedLogException;
 import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.logstreams.log.LogStreamReader;
 import io.zeebe.logstreams.log.LoggedEvent;
@@ -20,6 +21,9 @@ import io.zeebe.protocol.impl.record.RecordMetadata;
 import io.zeebe.protocol.impl.record.UnifiedRecordValue;
 import io.zeebe.protocol.record.RecordType;
 import io.zeebe.protocol.record.ValueType;
+import io.zeebe.util.health.FailureListener;
+import io.zeebe.util.health.HealthMonitorable;
+import io.zeebe.util.health.HealthStatus;
 import io.zeebe.util.retry.BackOffRetryStrategy;
 import io.zeebe.util.retry.EndlessRetryStrategy;
 import io.zeebe.util.retry.RetryStrategy;
@@ -30,6 +34,7 @@ import io.zeebe.util.sched.SchedulingHints;
 import io.zeebe.util.sched.future.ActorFuture;
 import io.zeebe.util.sched.future.CompletableActorFuture;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +45,7 @@ import java.util.stream.Collectors;
 import org.agrona.LangUtil;
 import org.slf4j.Logger;
 
-public final class ExporterDirector extends Actor {
+public final class ExporterDirector extends Actor implements HealthMonitorable {
 
   private static final String ERROR_MESSAGE_EXPORTING_ABORTED =
       "Expected to export record '{}' successfully, but exception was thrown.";
@@ -57,10 +62,12 @@ public final class ExporterDirector extends Actor {
   private final String name;
   private final RetryStrategy exportingRetryStrategy;
   private final RetryStrategy recordWrapStrategy;
+  private final List<FailureListener> listeners = new ArrayList<>();
+
   private LogStreamReader logStreamReader;
   private EventFilter eventFilter;
   private ExportersState state;
-
+  private HealthStatus status = HealthStatus.HEALTHY;
   private ActorCondition onCommitPositionUpdatedCondition;
   private boolean inExportingPhase;
   private boolean isPaused;
@@ -94,7 +101,6 @@ public final class ExporterDirector extends Actor {
         () -> {
           isPaused = true;
           exporterPhase = ExporterPhase.PAUSED;
-          return;
         });
   }
 
@@ -104,7 +110,6 @@ public final class ExporterDirector extends Actor {
           isPaused = false;
           exporterPhase = ExporterPhase.EXPORTING;
           actor.submit(this::readNextEvent);
-          return;
         });
   }
 
@@ -122,7 +127,14 @@ public final class ExporterDirector extends Actor {
 
   @Override
   protected void onActorStarting() {
-    final ActorFuture<LogStreamReader> newReaderFuture = logStream.newLogStreamReader();
+    final ActorFuture<LogStreamReader> newReaderFuture;
+    try {
+      newReaderFuture = logStream.newLogStreamReader();
+    } catch (final CorruptedLogException e) {
+      onUnrecoverableFailure(e);
+      return;
+    }
+
     actor.runOnCompletionBlockingCurrentPhase(
         newReaderFuture,
         (reader, errorOnReceivingReader) -> {
@@ -155,6 +167,9 @@ public final class ExporterDirector extends Actor {
       eventFilter = createEventFilter(containers);
       LOG.debug("Set event filter for exporters: {}", eventFilter);
 
+    } catch (final CorruptedLogException e) {
+      onUnrecoverableFailure(e);
+      return;
     } catch (final Exception e) {
       onFailure();
       LangUtil.rethrowUnchecked(e);
@@ -189,7 +204,14 @@ public final class ExporterDirector extends Actor {
     state = new ExportersState(zeebeDb, zeebeDb.createContext());
 
     final long snapshotPosition = state.getLowestPosition();
-    final boolean failedToRecoverReader = !logStreamReader.seekToNextEvent(snapshotPosition);
+    final boolean failedToRecoverReader;
+    try {
+      failedToRecoverReader = !logStreamReader.seekToNextEvent(snapshotPosition);
+    } catch (final CorruptedLogException e) {
+      onUnrecoverableFailure(e);
+      return;
+    }
+
     if (failedToRecoverReader) {
       throw new IllegalStateException(
           String.format(ERROR_MESSAGE_RECOVER_FROM_SNAPSHOT_FAILED, snapshotPosition, getName()));
@@ -272,14 +294,18 @@ public final class ExporterDirector extends Actor {
   }
 
   private void readNextEvent() {
-    if (shouldExport()) {
-      final LoggedEvent currentEvent = logStreamReader.next();
-      if (eventFilter == null || eventFilter.applies(currentEvent)) {
-        inExportingPhase = true;
-        exportEvent(currentEvent);
-      } else {
-        skipRecord(currentEvent);
+    try {
+      if (shouldExport()) {
+        final LoggedEvent currentEvent = logStreamReader.next();
+        if (eventFilter == null || eventFilter.applies(currentEvent)) {
+          inExportingPhase = true;
+          exportEvent(currentEvent);
+        } else {
+          skipRecord(currentEvent);
+        }
       }
+    } catch (final CorruptedLogException e) {
+      onUnrecoverableFailure(e);
     }
   }
 
@@ -340,6 +366,23 @@ public final class ExporterDirector extends Actor {
 
   private boolean isClosed() {
     return !isOpened.get();
+  }
+
+  private void onUnrecoverableFailure(final Exception e) {
+    LOG.error("Detected unrecoverable failure: ", e);
+    status = HealthStatus.DEAD;
+    listeners.forEach(FailureListener::onUnrecoverableFailure);
+    actor.close();
+  }
+
+  @Override
+  public HealthStatus getHealthStatus() {
+    return status;
+  }
+
+  @Override
+  public void addFailureListener(final FailureListener failureListener) {
+    listeners.add(failureListener);
   }
 
   private static class RecordExporter {

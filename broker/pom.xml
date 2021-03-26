@@ -235,6 +235,10 @@
       <artifactId>spring-boot-actuator</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>io.zeebe</groupId>
+      <artifactId>zeebe-journal</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

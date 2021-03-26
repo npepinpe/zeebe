@@ -56,6 +56,7 @@ import io.atomix.utils.concurrent.ComposableFuture;
 import io.atomix.utils.concurrent.ThreadContext;
 import io.atomix.utils.logging.ContextualLoggerFactory;
 import io.atomix.utils.logging.LoggerContext;
+import io.zeebe.journal.file.record.CorruptedLogException;
 import io.zeebe.snapshots.raft.PersistedSnapshot;
 import io.zeebe.snapshots.raft.ReceivableSnapshotStore;
 import java.time.Duration;
@@ -198,7 +199,12 @@ public class RaftContext implements AutoCloseable {
   }
 
   private void onUncaughtException(final Throwable error) {
-    log.error("An uncaught exception occurred, transition to inactive role", error);
+    if (error instanceof CorruptedLogException) {
+      log.error("Detected unrecoverable log corruption, transition to inactive role: ", error);
+    } else {
+      log.error("An uncaught exception occurred, transition to inactive role", error);
+    }
+
     try {
       // to prevent further operations submitted to the threadcontext to execute
       transition(Role.INACTIVE);

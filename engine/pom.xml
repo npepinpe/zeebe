@@ -14,7 +14,6 @@
   </parent>
 
   <dependencies>
-
     <dependency>
       <groupId>io.zeebe</groupId>
       <artifactId>zeebe-util</artifactId>
@@ -151,6 +150,11 @@
       <artifactId>commons-lang3</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>io.zeebe</groupId>
+      <artifactId>zeebe-journal</artifactId>
+    </dependency>
+
     <!-- TEMPORARY -->
 
     <dependency>
@@ -160,7 +164,6 @@
       <classifier>tests</classifier>
       <scope>test</scope>
     </dependency>
-
   </dependencies>
 
   <build>

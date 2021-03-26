@@ -19,4 +19,6 @@ public interface FailureListener {
    * expected to call {#onRecovered} when it is marked as healthy.
    */
   void onRecovered();
+
+  void onUnrecoverableFailure();
 }

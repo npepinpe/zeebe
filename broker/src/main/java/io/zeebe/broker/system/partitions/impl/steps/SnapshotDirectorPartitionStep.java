@@ -26,12 +26,16 @@ public class SnapshotDirectorPartitionStep implements PartitionStep {
             context.getLogStream(),
             snapshotPeriod);
 
+    context
+        .getComponentHealthMonitor()
+        .registerComponent(snapshotDirector.getName(), snapshotDirector);
     context.setSnapshotDirector(snapshotDirector);
     return context.getScheduler().submitActor(snapshotDirector);
   }
 
   @Override
   public ActorFuture<Void> close(final PartitionContext context) {
+    context.getComponentHealthMonitor().removeComponent(context.getSnapshotDirector().getName());
     final ActorFuture<Void> future = context.getSnapshotDirector().closeAsync();
     context.setSnapshotDirector(null);
     return future;

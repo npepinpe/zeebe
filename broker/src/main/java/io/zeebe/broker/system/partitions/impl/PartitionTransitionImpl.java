@@ -95,18 +95,22 @@ public class PartitionTransitionImpl implements PartitionTransition {
     }
 
     final PartitionStep step = steps.remove(0);
-    step.open(currentTerm, context)
-        .onComplete(
-            (value, err) -> {
-              if (err != null) {
-                LOG.error("Expected to open step '{}' but failed with", step.getName(), err);
-                tryCloseStep(step);
-                future.completeExceptionally(err);
-              } else {
-                openedSteps.add(step);
-                installPartition(currentTerm, future, steps);
-              }
-            });
+    try {
+      step.open(currentTerm, context)
+          .onComplete(
+              (value, err) -> {
+                if (err != null) {
+                  LOG.error("Expected to open step '{}' but failed with", step.getName(), err);
+                  tryCloseStep(step);
+                  future.completeExceptionally(err);
+                } else {
+                  openedSteps.add(step);
+                  installPartition(currentTerm, future, steps);
+                }
+              });
+    } catch (final Exception e) {
+      future.completeExceptionally(e);
+    }
   }
 
   private void tryCloseStep(final PartitionStep step) {
@@ -127,11 +131,11 @@ public class PartitionTransitionImpl implements PartitionTransition {
 
   private CompletableActorFuture<Void> closeSteps(final List<PartitionStep> steps) {
     final var closingPartitionFuture = new CompletableActorFuture<Void>();
-    stepByStepClosing(closingPartitionFuture, steps, null);
+    closeNextStep(closingPartitionFuture, steps, null);
     return closingPartitionFuture;
   }
 
-  private void stepByStepClosing(
+  private void closeNextStep(
       final CompletableActorFuture<Void> future,
       final List<PartitionStep> steps,
       final Throwable throwable) {
@@ -150,24 +154,29 @@ public class PartitionTransitionImpl implements PartitionTransition {
     final PartitionStep step = steps.remove(0);
     LOG.debug("Closing Zeebe-Partition-{}: {}", context.getPartitionId(), step.getName());
 
-    final ActorFuture<Void> closeFuture = step.close(context);
-    closeFuture.onComplete(
-        (v, closingError) -> {
-          if (closingError == null) {
-            LOG.debug(
-                "Closing Zeebe-Partition-{}: {} closed successfully",
-                context.getPartitionId(),
-                step.getName());
-          } else {
-            LOG.error(
-                "Closing Zeebe-Partition-{}: {} failed to close. Closing remaining steps",
-                context.getPartitionId(),
-                step.getName(),
-                closingError);
-          }
+    try {
+      final ActorFuture<Void> closeFuture = step.close(context);
+      closeFuture.onComplete(
+          (v, closingError) -> {
+            if (closingError == null) {
+              LOG.debug(
+                  "Closing Zeebe-Partition-{}: {} closed successfully",
+                  context.getPartitionId(),
+                  step.getName());
+            } else {
+              LOG.error(
+                  "Closing Zeebe-Partition-{}: {} failed to close. Closing remaining steps",
+                  context.getPartitionId(),
+                  step.getName(),
+                  closingError);
+            }
 
-          openedSteps.remove(step);
-          stepByStepClosing(future, steps, throwable != null ? throwable : closingError);
-        });
+            openedSteps.remove(step);
+            closeNextStep(future, steps, throwable != null ? throwable : closingError);
+          });
+    } catch (final Exception e) {
+      openedSteps.remove(step);
+      closeNextStep(future, steps, e);
+    }
   }
 }
