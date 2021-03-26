@@ -7,7 +7,10 @@
  */
 package io.zeebe.engine.util;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.zeebe.protocol.record.intent.IncidentIntent;
+import io.zeebe.protocol.record.intent.JobBatchIntent;
 import io.zeebe.protocol.record.intent.JobIntent;
 import io.zeebe.protocol.record.intent.MessageStartEventSubscriptionIntent;
 import io.zeebe.protocol.record.intent.MessageSubscriptionIntent;
@@ -28,6 +31,7 @@ import io.zeebe.test.util.bpmn.random.steps.StepStartProcessInstance;
 import io.zeebe.test.util.bpmn.random.steps.StepTimeoutBPMNElement;
 import io.zeebe.test.util.record.RecordingExporter;
 import java.util.Map;
+import org.awaitility.Awaitility;
 
 /** This class executes individual {@link AbstractExecutionStep} for a given process */
 public class ProcessExecutor {
@@ -78,9 +82,16 @@ public class ProcessExecutor {
   }
 
   private void timeoutBPMNElement(final StepTimeoutBPMNElement step) {
-    RecordingExporter.timerRecords(TimerIntent.CREATED)
-        .withHandlerNodeId(step.getTimerEventId())
-        .await();
+    final var timerCreated =
+        RecordingExporter.timerRecords(TimerIntent.CREATED)
+            .withHandlerNodeId(step.getTimerEventId())
+            .getFirst();
+
+    Awaitility.await("await the timer to be processed")
+        .untilAsserted(
+            () ->
+                assertThat(engineRule.getLastProcessedPosition())
+                    .isGreaterThanOrEqualTo(timerCreated.getPosition()));
 
     engineRule.getClock().addTime(step.getDeltaTime());
 
@@ -148,6 +159,17 @@ public class ProcessExecutor {
     waitForJobToBeCreated(activateAndTimeoutJob.getJobType());
 
     engineRule.jobs().withType(activateAndTimeoutJob.getJobType()).withTimeout(100).activate();
+
+    final var activatedJobBatch =
+        RecordingExporter.jobBatchRecords(JobBatchIntent.ACTIVATED)
+            .withType(activateAndTimeoutJob.getJobType())
+            .getFirst();
+
+    Awaitility.await("await job batch to be processed")
+        .untilAsserted(
+            () ->
+                assertThat(engineRule.getLastProcessedPosition())
+                    .isGreaterThanOrEqualTo(activatedJobBatch.getPosition()));
 
     engineRule.getClock().addTime(AbstractExecutionStep.DEFAULT_DELTA);
 

@@ -24,7 +24,6 @@ import io.zeebe.test.util.record.RecordingExporter;
 import java.util.Collection;
 import org.assertj.core.api.SoftAssertions;
 import org.awaitility.Awaitility;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestWatcher;
@@ -47,22 +46,11 @@ public class ReplayStateRandomizedPropertyTest implements PropertyBasedTest {
   @Rule public TestWatcher failedTestDataPrinter = new FailedPropertyBasedTestDataPrinter(this);
   @Parameter public TestDataRecord record;
 
+  @Rule public final EngineRule engineRule = EngineRule.singlePartition();
+
   private ScheduledExecutionStep currentStep;
 
-  private long lastProcessedPosition = -1L;
-
-  @Rule
-  public final EngineRule engineRule =
-      EngineRule.singlePartition()
-          .withOnProcessedCallback(record -> lastProcessedPosition = record.getPosition())
-          .withOnSkippedCallback(record -> lastProcessedPosition = record.getPosition());
-
   private final ProcessExecutor processExecutor = new ProcessExecutor(engineRule);
-
-  @Before
-  public void init() {
-    lastProcessedPosition = -1L;
-  }
 
   @Override
   public TestDataRecord getDataRecord() {
@@ -108,7 +96,9 @@ public class ReplayStateRandomizedPropertyTest implements PropertyBasedTest {
     final var position = result.getPosition();
 
     Awaitility.await("await the last process record to be processed")
-        .untilAsserted(() -> assertThat(lastProcessedPosition).isGreaterThanOrEqualTo(position));
+        .untilAsserted(
+            () ->
+                assertThat(engineRule.getLastProcessedPosition()).isGreaterThanOrEqualTo(position));
 
     stopAndRestartEngineAndCompareStates();
   }
@@ -171,7 +161,8 @@ public class ReplayStateRandomizedPropertyTest implements PropertyBasedTest {
     Awaitility.await("await the last written record to be processed")
         .untilAsserted(
             () ->
-                assertThat(lastProcessedPosition).isEqualTo(engineRule.getLastWrittenPosition(1)));
+                assertThat(engineRule.getLastProcessedPosition())
+                    .isEqualTo(engineRule.getLastWrittenPosition(1)));
   }
 
   @Parameters(name = "{0}")
