@@ -54,10 +54,10 @@ public final class ProcessBuilder {
   private boolean initEventSubProcess(
       final ConstructionContext context,
       final io.zeebe.test.util.bpmn.random.IDGenerator idGenerator) {
-    final boolean hasEventSubProcess = context.getRandom().nextBoolean();
+    final boolean hasEventSubProcess = true; // context.getRandom().nextBoolean();
     if (hasEventSubProcess) {
       eventSubProcessId = "eventSubProcess_" + idGenerator.nextId();
-      isEventSubProcessInterrupting = context.getRandom().nextBoolean();
+      isEventSubProcessInterrupting = true; // context.getRandom().nextBoolean();
       eventSubProcessMessageName = "message_" + eventSubProcessId;
     }
     return hasEventSubProcess;

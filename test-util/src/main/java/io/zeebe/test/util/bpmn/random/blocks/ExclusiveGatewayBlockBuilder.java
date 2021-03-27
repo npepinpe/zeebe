@@ -51,7 +51,7 @@ public class ExclusiveGatewayBlockBuilder implements BlockBuilder {
     final BlockSequenceBuilder.BlockSequenceBuilderFactory blockSequenceBuilderFactory =
         context.getBlockSequenceBuilderFactory();
 
-    final int branches = Math.max(2, random.nextInt(maxBranches));
+    final int branches = 2; // Math.max(2, random.nextInt(maxBranches));
 
     for (int i = 0; i < branches; i++) {
       branchIds.add("edge_" + idGenerator.nextId());
@@ -91,7 +91,7 @@ public class ExclusiveGatewayBlockBuilder implements BlockBuilder {
   public ExecutionPathSegment findRandomExecutionPath(final Random random) {
     final ExecutionPathSegment result = new ExecutionPathSegment();
 
-    final int branch = random.nextInt(branchIds.size());
+    final int branch = 1; // random.nextInt(branchIds.size());
 
     if (branch == 0) {
       result.append(new StepPickDefaultCase(forkGatewayId, gatewayConditionVariable));
@@ -100,12 +100,12 @@ public class ExclusiveGatewayBlockBuilder implements BlockBuilder {
       final var pickConditionCase =
           new StepPickConditionCase(forkGatewayId, gatewayConditionVariable, branchIds.get(branch));
 
-      if (random.nextBoolean()) {
-        // cause an incident by not removing the variable required to evaluate the branch expression
-        result.append(
-            new StepExpressionIncidentCase(
-                forkGatewayId, gatewayConditionVariable, branchIds.get(branch), pickConditionCase));
-      }
+      //      if (random.nextBoolean()) {
+      // cause an incident by not removing the variable required to evaluate the branch expression
+      result.append(
+          new StepExpressionIncidentCase(
+              forkGatewayId, gatewayConditionVariable, branchIds.get(branch), pickConditionCase));
+      //      }
 
       result.append(pickConditionCase);
     }

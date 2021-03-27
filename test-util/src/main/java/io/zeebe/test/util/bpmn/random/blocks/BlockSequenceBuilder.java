@@ -28,11 +28,13 @@ public class BlockSequenceBuilder implements BlockBuilder {
   private static final List<BlockBuilderFactory> BLOCK_BUILDER_FACTORIES =
       Arrays.asList(
           new ServiceTaskBlockBuilder.Factory(),
-          new IntermediateMessageCatchEventBlockBuilder.Factory(),
-          new SubProcessBlockBuilder.Factory(),
-          new ExclusiveGatewayBlockBuilder.Factory(),
-          new ParallelGatewayBlockBuilder.Factory(),
-          new ReceiveTaskBlockBuilder.Factory());
+          //          new IntermediateMessageCatchEventBlockBuilder.Factory(),
+          //          new SubProcessBlockBuilder.Factory(),
+          new ExclusiveGatewayBlockBuilder.Factory()
+          //          ,
+          //          new ParallelGatewayBlockBuilder.Factory(),
+          //          new ReceiveTaskBlockBuilder.Factory()
+          );
 
   private final List<BlockBuilder> blockBuilders = new ArrayList<>();
 
