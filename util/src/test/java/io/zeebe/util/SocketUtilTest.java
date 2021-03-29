@@ -16,6 +16,14 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import org.junit.Test;
 
+/**
+ * This test uses <a href="file:../resources/test-hosts">/resources/test-hosts</a> file as the hosts
+ * file in JVM (as the system property <code>-Djdk.net.hosts.file=src/test/resources/test-hosts
+ * </code>). You can find more info about this there: {@link InetAddress#createNameService()}. This
+ * property sets via Maven configuration.
+ *
+ * @see InetAddress#createNameService()
+ */
 public final class SocketUtilTest {
 
   @Test

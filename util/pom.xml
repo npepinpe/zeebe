@@ -107,6 +107,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration combine.children="append">
+          <!-- This is needed for the io.zeebe.util.SocketUtilTest test.
+          We should set custom DNS resolutions for testing purposes. -->
           <argLine combine.children="append">
             -Djdk.net.hosts.file=src/test/resources/test-hosts
           </argLine>
