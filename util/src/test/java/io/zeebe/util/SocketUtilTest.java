@@ -16,7 +16,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import org.junit.Test;
 
-public class SocketUtilTest {
+public final class SocketUtilTest {
 
   @Test
   public void shouldPrintDnsAndPort() {
