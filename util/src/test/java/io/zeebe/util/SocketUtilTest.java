@@ -24,7 +24,7 @@ public class SocketUtilTest {
     final int port = 1234;
     final String hostAndPortString =
         SocketUtil.toHostAndPortString(InetSocketAddress.createUnresolved(host, port));
-    assertThat(hostAndPortString).isEqualTo(String.format("%s:%d", host, port));
+    assertThat(hostAndPortString).isEqualTo("foo.barr:1234");
   }
 
   @Test
@@ -36,7 +36,7 @@ public class SocketUtilTest {
     assertThat(testInetAddress).isNotNull();
     assertThat(testInetAddress).isInstanceOf(Inet6Address.class);
     final String hostAndPortString = SocketUtil.toHostAndPortString(testAddress);
-    assertThat(hostAndPortString).isEqualTo(String.format("%s:%d", host, port));
+    assertThat(hostAndPortString).isEqualTo("foo.bar:1234");
   }
 
   @Test
@@ -48,7 +48,7 @@ public class SocketUtilTest {
     assertThat(testInetAddress).isNotNull();
     assertThat(testInetAddress).isInstanceOf(Inet4Address.class);
     final String hostAndPortString = SocketUtil.toHostAndPortString(testAddress);
-    assertThat(hostAndPortString).isEqualTo(String.format("%s:%d", host, port));
+    assertThat(hostAndPortString).isEqualTo("foo4.bar:1234");
   }
 
   @Test
@@ -57,8 +57,7 @@ public class SocketUtilTest {
     final int port = 1234;
     final InetSocketAddress testAddress = new InetSocketAddress(testInet6Address, port);
     final String hostAndPortString = SocketUtil.toHostAndPortString(testAddress);
-    assertThat(hostAndPortString)
-        .isEqualTo(String.format("[%s]:%d", testInet6Address.getHostAddress(), port));
+    assertThat(hostAndPortString).isEqualTo("[1112:0:0:0:0:0:0:2]:1234");
   }
 
   @Test
@@ -67,7 +66,6 @@ public class SocketUtilTest {
     final int port = 1234;
     final InetSocketAddress testAddress = new InetSocketAddress(testInet6Address, port);
     final String hostAndPortString = SocketUtil.toHostAndPortString(testAddress);
-    assertThat(hostAndPortString)
-        .isEqualTo(String.format("%s:%d", testInet6Address.getHostAddress(), port));
+    assertThat(hostAndPortString).isEqualTo("127.0.0.1:1234");
   }
 }
