@@ -21,10 +21,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import io.atomix.cluster.MemberId;
 import io.atomix.raft.storage.RaftStorage;
-import io.atomix.storage.buffer.Buffer;
-import io.atomix.storage.buffer.FileBuffer;
+import io.atomix.storage.StorageException;
 import io.atomix.utils.serializer.Serializer;
 import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
+import java.nio.file.StandardOpenOption;
+import org.agrona.IoUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,10 +46,12 @@ public class MetaStore implements AutoCloseable {
 
   private final Logger log = LoggerFactory.getLogger(getClass());
   private final Serializer serializer;
-  private final FileBuffer metadataBuffer;
-  private final Buffer configurationBuffer;
+  private final FileChannel metaFileChannel;
+  private final FileChannel configurationChannel;
+  private final File metaFile;
+  private final File confFile;
 
-  public MetaStore(final RaftStorage storage, final Serializer serializer) {
+  public MetaStore(final RaftStorage storage, final Serializer serializer) throws IOException {
     this.serializer = checkNotNull(serializer, "serializer cannot be null");
 
     if (!(storage.directory().isDirectory() || storage.directory().mkdirs())) {
@@ -54,11 +61,22 @@ public class MetaStore implements AutoCloseable {
 
     // Note that for raft safety, irrespective of the storage level, <term, vote> metadata is always
     // persisted on disk.
-    final File metaFile = new File(storage.directory(), String.format("%s.meta", storage.prefix()));
-    metadataBuffer = FileBuffer.allocate(metaFile, 12);
+    metaFile = new File(storage.directory(), String.format("%s.meta", storage.prefix()));
+    if (!metaFile.exists()) {
+      metaFileChannel = IoUtil.createEmptyFile(metaFile, 32, true);
+    } else {
+      metaFileChannel =
+          FileChannel.open(metaFile.toPath(), StandardOpenOption.READ, StandardOpenOption.WRITE);
+    }
 
-    final File confFile = new File(storage.directory(), String.format("%s.conf", storage.prefix()));
-    configurationBuffer = FileBuffer.allocate(confFile, 32);
+    confFile = new File(storage.directory(), String.format("%s.conf", storage.prefix()));
+
+    if (!confFile.exists()) {
+      configurationChannel = IoUtil.createEmptyFile(confFile, 32, true);
+    } else {
+      configurationChannel =
+          FileChannel.open(confFile.toPath(), StandardOpenOption.READ, StandardOpenOption.WRITE);
+    }
   }
 
   /**
@@ -68,7 +86,16 @@ public class MetaStore implements AutoCloseable {
    */
   public synchronized void storeTerm(final long term) {
     log.trace("Store term {}", term);
-    metadataBuffer.writeLong(0, term).flush();
+    final byte[] test = new byte[Long.BYTES];
+    final ByteBuffer buffer = ByteBuffer.wrap(test);
+    buffer.putLong(term);
+    buffer.flip();
+    try {
+      metaFileChannel.write(buffer, 0);
+      metaFileChannel.force(true);
+    } catch (final IOException e) {
+      throw new StorageException(e);
+    }
   }
 
   /**
@@ -77,7 +104,14 @@ public class MetaStore implements AutoCloseable {
    * @return The stored server term.
    */
   public synchronized long loadTerm() {
-    return metadataBuffer.readLong(0);
+    final byte[] test = new byte[Long.BYTES];
+    final ByteBuffer buffer = ByteBuffer.wrap(test);
+    try {
+      metaFileChannel.read(buffer, 0);
+    } catch (final IOException e) {
+      throw new StorageException(e);
+    }
+    return buffer.getLong(0);
   }
 
   /**
@@ -87,7 +121,27 @@ public class MetaStore implements AutoCloseable {
    */
   public synchronized void storeVote(final MemberId vote) {
     log.trace("Store vote {}", vote);
-    metadataBuffer.writeString(8, vote != null ? vote.id() : null).flush();
+    final int offset = Long.BYTES;
+
+    final byte[] test = new byte[1 + Integer.BYTES];
+    final ByteBuffer buffer = ByteBuffer.wrap(test);
+
+    try {
+      if (vote == null) {
+        buffer.put((byte) 0);
+        buffer.flip();
+        metaFileChannel.write(buffer, offset);
+      } else {
+        final byte[] bytes = vote.id().getBytes(Charset.defaultCharset());
+        buffer.put((byte) 1).putInt(bytes.length);
+        buffer.flip();
+        metaFileChannel.write(buffer, offset);
+        metaFileChannel.write(ByteBuffer.wrap(bytes), offset + 1 + Integer.BYTES);
+      }
+      metaFileChannel.force(true);
+    } catch (final IOException e) {
+      throw new StorageException(e);
+    }
   }
 
   /**
@@ -96,8 +150,24 @@ public class MetaStore implements AutoCloseable {
    * @return The last vote for the server.
    */
   public synchronized MemberId loadVote() {
-    final String id = metadataBuffer.readString(8);
-    return id != null ? MemberId.from(id) : null;
+    final int offset = Long.BYTES;
+
+    final ByteBuffer buffer = ByteBuffer.allocate((int) metaFile.length());
+
+    try {
+      metaFileChannel.read(buffer, offset);
+    } catch (final IOException e) {
+      throw new StorageException(e);
+    }
+    buffer.position(0);
+    if (buffer.get() == 1) {
+      final int length = buffer.getInt();
+      final byte[] idBytes = new byte[length];
+      buffer.get(idBytes);
+      final String id = new String(idBytes, 0, idBytes.length, Charset.defaultCharset());
+      return MemberId.from(id);
+    }
+    return null;
   }
 
   /**
@@ -107,9 +177,19 @@ public class MetaStore implements AutoCloseable {
    */
   public synchronized void storeConfiguration(final Configuration configuration) {
     log.trace("Store configuration {}", configuration);
+
     final byte[] bytes = serializer.encode(configuration);
-    configurationBuffer.position(0).writeByte(1).writeInt(bytes.length).write(bytes);
-    configurationBuffer.flush();
+    final ByteBuffer buffer = ByteBuffer.wrap(bytes);
+    final ByteBuffer header = ByteBuffer.allocate(1 + Integer.BYTES);
+    header.put((byte) 1).putInt(bytes.length);
+    header.flip();
+    try {
+      configurationChannel.write(header, 0);
+      configurationChannel.write(buffer, 1 + Integer.BYTES);
+      configurationChannel.force(true);
+    } catch (final IOException e) {
+      throw new StorageException(e);
+    }
   }
 
   /**
@@ -118,20 +198,35 @@ public class MetaStore implements AutoCloseable {
    * @return The current cluster configuration.
    */
   public synchronized Configuration loadConfiguration() {
-    if (configurationBuffer.position(0).readByte() == 1) {
-      final int bytesLength = configurationBuffer.readInt();
-      if (bytesLength == 0) {
-        return null;
+    try {
+      configurationChannel.position(0);
+      final ByteBuffer buffer = ByteBuffer.allocate((int) confFile.length());
+      configurationChannel.read(buffer);
+      buffer.position(0);
+
+      if (buffer.get() == 1) {
+        final int bytesLength = buffer.getInt();
+        if (bytesLength == 0) {
+          return null;
+        }
+        final byte[] serializedBytes = new byte[bytesLength];
+        buffer.get(serializedBytes);
+        return serializer.decode(serializedBytes);
       }
-      return serializer.decode(configurationBuffer.readBytes(bytesLength));
+    } catch (final IOException e) {
+      throw new StorageException(e);
     }
     return null;
   }
 
   @Override
   public synchronized void close() {
-    metadataBuffer.close();
-    configurationBuffer.close();
+    try {
+      metaFileChannel.close();
+      configurationChannel.close();
+    } catch (final IOException e) {
+      log.warn("Failed to close metastore", e);
+    }
   }
 
   @Override
