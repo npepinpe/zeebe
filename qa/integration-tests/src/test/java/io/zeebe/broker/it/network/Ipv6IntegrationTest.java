@@ -28,13 +28,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
+import org.testcontainers.utility.DockerImageName;
 
 public class Ipv6IntegrationTest {
 
   private static final int CLUSTER_SIZE = 3;
   private static final int PARTITION_COUNT = 1;
   private static final int REPLICATION_FACTOR = 3;
-  private static final String ZEEBE_IMAGE_VERSION = "camunda/zeebe:current-test";
+  private static final DockerImageName ZEEBE_IMAGE_VERSION =
+      DockerImageName.parse("camunda/zeebe:current-test");
   private static final String NETWORK_ALIAS = Ipv6IntegrationTest.class.getName();
   private static final String BASE_PART_OF_SUBNET = "2081::aede:4844:fe00:";
   private static final String SUBNET = BASE_PART_OF_SUBNET + "0/123";
