@@ -152,6 +152,7 @@ public final class BpmnEventSubscriptionBehavior {
     triggerEvent(context, eventTrigger -> triggerBoundaryEvent(element, context, eventTrigger));
   }
 
+  // TODO (saig0): move the boundary event behavior to the caller side (#6187)
   private long triggerBoundaryEvent(
       final ExecutableActivity element,
       final BpmnElementContext context,
@@ -218,6 +219,44 @@ public final class BpmnEventSubscriptionBehavior {
 
   public void publishTriggeredBoundaryEvent(final BpmnElementContext context) {
     publishTriggeredEvent(context, BpmnElementType.BOUNDARY_EVENT);
+  }
+
+  /** @return true if the boundary event is triggered */
+  public boolean activateBoundaryEventIfTriggered(final BpmnElementContext context) {
+    final var eventTrigger =
+        eventScopeInstanceState.peekEventTrigger(context.getElementInstanceKey());
+    if (eventTrigger == null) {
+      return false;
+    }
+
+    final var elementRecord =
+        getEventRecord(context.getRecordValue(), eventTrigger, BpmnElementType.BOUNDARY_EVENT);
+
+    // the event trigger is deleted on transition to terminated
+    stateTransitionBehavior.transitionToTerminated(context);
+
+    // TODO (saig0): follow DRY
+    final var eventInstanceKey = keyGenerator.nextKey();
+    // transition to activating and activated directly to pass the variables to this instance
+    stateWriter.appendFollowUpEvent(
+        eventInstanceKey, ProcessInstanceIntent.ELEMENT_ACTIVATING, elementRecord);
+    stateWriter.appendFollowUpEvent(
+        eventInstanceKey, ProcessInstanceIntent.ELEMENT_ACTIVATED, elementRecord);
+
+    final var eventVariables = eventTrigger.getVariables();
+    if (eventVariables.capacity() > 0) {
+      // set as local variables of the element instance to use them for the variable output mapping
+      variableBehavior.mergeLocalDocument(
+          eventInstanceKey,
+          context.getProcessDefinitionKey(),
+          context.getProcessInstanceKey(),
+          eventVariables);
+    }
+
+    commandWriter.appendFollowUpCommand(
+        eventInstanceKey, ProcessInstanceIntent.COMPLETE_ELEMENT, elementRecord);
+
+    return true;
   }
 
   private void publishTriggeredEvent(

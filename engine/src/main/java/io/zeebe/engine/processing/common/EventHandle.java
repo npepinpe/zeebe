@@ -7,6 +7,7 @@
  */
 package io.zeebe.engine.processing.common;
 
+import io.zeebe.engine.processing.deployment.model.element.ExecutableCatchEvent;
 import io.zeebe.engine.processing.deployment.model.element.ExecutableFlowElement;
 import io.zeebe.engine.processing.deployment.model.element.ExecutableStartEvent;
 import io.zeebe.engine.processing.streamprocessor.MigratedStreamProcessors;
@@ -78,11 +79,49 @@ public final class EventHandle {
       if (catchEvent.getElementType() == BpmnElementType.INTERMEDIATE_CATCH_EVENT
           || catchEvent.getElementType() == BpmnElementType.RECEIVE_TASK
           || catchEvent.getElementType() == BpmnElementType.EVENT_BASED_GATEWAY) {
+
         commandWriter.appendFollowUpCommand(
             eventScopeKey, ProcessInstanceIntent.COMPLETE_ELEMENT, elementRecord);
+        return;
+      }
 
-      } else {
+      // TODO (saig0): handle interrupting boundary events
+      if (catchEvent instanceof ExecutableCatchEvent) {
+        final var event = (ExecutableCatchEvent) catchEvent;
+
+        if (event.isInterrupting()) {
+          commandWriter.appendFollowUpCommand(
+              eventScopeKey, ProcessInstanceIntent.TERMINATE_ELEMENT, elementRecord);
+
+          return;
+        }
+
+        elementRecord
+            .setBpmnElementType(catchEvent.getElementType())
+            .setElementId(catchEvent.getId())
+            .setFlowScopeKey(eventScopeKey);
+
+        if (MigratedStreamProcessors.isMigrated(catchEvent.getElementType())) {
+          // TODO (saig0): pass the message variables (temporary vars)
+          commandWriter.appendNewCommand(ProcessInstanceIntent.ACTIVATE_ELEMENT, elementRecord);
+        } else {
+          stateWriter.appendFollowUpEvent(
+              keyGenerator.nextKey(), ProcessInstanceIntent.ELEMENT_ACTIVATING, elementRecord);
+        }
+
+        return;
+      }
+
+      elementRecord
+          .setBpmnElementType(catchEvent.getElementType())
+          .setElementId(catchEvent.getId())
+          .setFlowScopeKey(eventScopeKey);
+
+      if (MigratedStreamProcessors.isMigrated(catchEvent.getElementType())) {
         commandWriter.appendNewCommand(ProcessInstanceIntent.ACTIVATE_ELEMENT, elementRecord);
+      } else {
+        stateWriter.appendFollowUpEvent(
+            keyGenerator.nextKey(), ProcessInstanceIntent.ELEMENT_ACTIVATING, elementRecord);
       }
 
     } else {
