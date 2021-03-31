@@ -15,6 +15,7 @@ import io.zeebe.broker.system.monitoring.DiskSpaceUsageListener;
 import io.zeebe.broker.system.monitoring.HealthMetrics;
 import io.zeebe.engine.processing.streamprocessor.StreamProcessor;
 import io.zeebe.snapshots.raft.PersistedSnapshotStore;
+import io.zeebe.util.exception.UnrecoverableException;
 import io.zeebe.util.health.CriticalComponentsHealthMonitor;
 import io.zeebe.util.health.FailureListener;
 import io.zeebe.util.health.HealthMonitorable;
@@ -126,6 +127,12 @@ public final class ZeebePartition extends Actor
                   }
                 });
             onRecoveredInternal();
+          } else if (error instanceof UnrecoverableException) {
+            LOG.error(
+                "Failed to install leader partition {} with unrecoverable failure: ",
+                context.getPartitionId(),
+                error);
+            onUnrecoverableFailure();
           } else {
             LOG.error("Failed to install leader partition {}", context.getPartitionId(), error);
             onInstallFailure(newTerm);
@@ -152,6 +159,12 @@ public final class ZeebePartition extends Actor
                   }
                 });
             onRecoveredInternal();
+          } else if (error instanceof UnrecoverableException) {
+            LOG.error(
+                "Failed to install follower partition {} with unrecoverable failure: ",
+                context.getPartitionId(),
+                error);
+            onUnrecoverableFailure();
           } else {
             LOG.error("Failed to install follower partition {}", context.getPartitionId(), error);
             onInstallFailure(newTerm);
@@ -258,6 +271,19 @@ public final class ZeebePartition extends Actor
         () -> {
           healthMetrics.setUnhealthy();
           failureListeners.forEach(FailureListener::onFailure);
+        });
+  }
+
+  @Override
+  public void onUnrecoverableFailure() {
+    actor.run(
+        () -> {
+          transitionToInactive();
+          context.getRaftPartition().goInactive();
+          failureListeners.forEach(FailureListener::onUnrecoverableFailure);
+          context
+              .getPartitionListeners()
+              .forEach(l -> l.onBecomingInactive(context.getPartitionId(), term));
         });
   }
 

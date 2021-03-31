@@ -17,6 +17,7 @@ import io.zeebe.logstreams.log.LogStreamRecordWriter;
 import io.zeebe.logstreams.log.LogStreamWriter;
 import io.zeebe.logstreams.storage.LogStorage;
 import io.zeebe.logstreams.storage.LogStorageReader;
+import io.zeebe.util.exception.UnrecoverableException;
 import io.zeebe.util.health.FailureListener;
 import io.zeebe.util.health.HealthStatus;
 import io.zeebe.util.sched.Actor;
@@ -52,6 +53,7 @@ public final class LogStreamImpl extends Actor implements LogStream, FailureList
   private Throwable closeError; // set if any error occurred during closeAsync
   private final String actorName;
   private FailureListener failureListener;
+  private HealthStatus healthStatus = HealthStatus.HEALTHY;
 
   LogStreamImpl(
       final ActorScheduler actorScheduler,
@@ -184,9 +186,14 @@ public final class LogStreamImpl extends Actor implements LogStream, FailureList
   }
 
   private LogStreamReader createLogStreamReader() {
-    final LogStreamReader newReader = new LogStreamReaderImpl(logStorage.newReader());
-    readers.add(newReader);
-    return newReader;
+    try {
+      final LogStreamReader newReader = new LogStreamReaderImpl(logStorage.newReader());
+      readers.add(newReader);
+      return newReader;
+    } catch (final UnrecoverableException e) {
+      onUnrecoverableFailure();
+      throw e;
+    }
   }
 
   private void internalSetCommitPosition(final long commitPosition) {
@@ -252,7 +259,16 @@ public final class LogStreamImpl extends Actor implements LogStream, FailureList
     final var appenderOpenFuture = new CompletableActorFuture<LogStorageAppender>();
 
     appenderFuture = appenderOpenFuture;
-    final var lastPosition = getLastPosition();
+
+    final long lastPosition;
+    try {
+      lastPosition = getLastPosition();
+    } catch (final UnrecoverableException e) {
+      onUnrecoverableFailure();
+      appenderFuture.completeExceptionally(e);
+      return appenderFuture;
+    }
+
     final long initialPosition;
     if (lastPosition > 0) {
       internalSetCommitPosition(lastPosition);
@@ -317,7 +333,7 @@ public final class LogStreamImpl extends Actor implements LogStream, FailureList
 
   @Override
   public HealthStatus getHealthStatus() {
-    return actor.isClosed() ? HealthStatus.UNHEALTHY : HealthStatus.HEALTHY;
+    return healthStatus;
   }
 
   @Override
@@ -329,6 +345,7 @@ public final class LogStreamImpl extends Actor implements LogStream, FailureList
   public void onFailure() {
     actor.run(
         () -> {
+          healthStatus = HealthStatus.UNHEALTHY;
           if (failureListener != null) {
             failureListener.onFailure();
           }
@@ -340,9 +357,22 @@ public final class LogStreamImpl extends Actor implements LogStream, FailureList
   public void onRecovered() {
     actor.run(
         () -> {
+          healthStatus = HealthStatus.HEALTHY;
           if (failureListener != null) {
             failureListener.onRecovered();
           }
+        });
+  }
+
+  @Override
+  public void onUnrecoverableFailure() {
+    actor.run(
+        () -> {
+          healthStatus = HealthStatus.DEAD;
+          if (failureListener != null) {
+            failureListener.onUnrecoverableFailure();
+          }
+          closeAsync();
         });
   }
 
