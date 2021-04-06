@@ -70,10 +70,12 @@ public final class UserTaskTest {
             RecordingExporter.processInstanceRecords()
                 .withProcessInstanceKey(processInstanceKey)
                 .withElementType(BpmnElementType.USER_TASK)
-                .limit(2))
+                .limit(3))
         .extracting(Record::getIntent)
         .containsSequence(
-            ProcessInstanceIntent.ELEMENT_ACTIVATING, ProcessInstanceIntent.ELEMENT_ACTIVATED);
+            ProcessInstanceIntent.ACTIVATE_ELEMENT,
+            ProcessInstanceIntent.ELEMENT_ACTIVATING,
+            ProcessInstanceIntent.ELEMENT_ACTIVATED);
 
     final Record<ProcessInstanceRecordValue> userTask =
         RecordingExporter.processInstanceRecords()
