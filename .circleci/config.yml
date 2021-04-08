@@ -1,0 +1,16 @@
+version: 2.1
+
+orbs:
+  maven: circleci/maven@1.1
+
+executors:
+  j11:
+    docker:
+      - image: 'cimg/openjdk:11.0'
+
+workflows:
+  test:
+    jobs:
+      - maven/parallel_test:
+          parallelism: 4
+          executor: j11
