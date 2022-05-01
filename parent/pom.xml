@@ -1039,6 +1039,12 @@
       <artifactId>log4j-slf4j-impl</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-runner</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -1526,6 +1532,7 @@
                   <dep>org.bouncycastle:bcprov-jdk15on</dep>
                   <dep>org.junit.jupiter:junit-jupiter-engine</dep>
                   <dep>org.junit.vintage:junit-vintage-engine</dep>
+                  <dep>org.junit.platform:junit-platform-runner</dep>
                 </ignoredUnusedDeclaredDependencies>
               </configuration>
             </execution>
