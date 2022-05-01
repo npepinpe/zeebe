@@ -35,6 +35,12 @@ jobs:
           -P parallel-tests,extract-flaky-tests
           -pl !:zeebe-elasticsearch-exporter
           verify
+      - name: Foresight Test Report Uploader
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-result-junit
+          path: "**/target/failsafe-reports"
       - name: Archive Test Results
         uses: actions/upload-artifact@v3
         if: failure()
@@ -73,6 +79,12 @@ jobs:
             **/target/failsafe-reports/
             **/hs_err_*.log
           retention-days: 7
+      - name: Foresight Test Report Uploader
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-result-junit
+          path: "**/target/failsafe-reports"
   project-list:
     # Builds a list of projects where unit tests can be run on hosted runners
     name: List projects
@@ -126,6 +138,12 @@ jobs:
             **/target/surefire-reports/
             **/hs_err_*.log
           retention-days: 7
+      - name: Foresight Test Report Uploader
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-result-junit
+          path: "**/target/surefire-reports"
   slow-unit-tests:
     name: Slow unit tests
     runs-on: ["n1-standard-8-netssd-preempt"]
@@ -158,6 +176,12 @@ jobs:
             **/target/surefire-reports/
             **/hs_err_*.log
           retention-days: 7
+      - name: Foresight Test Report Uploader
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-result-junit
+          path: "**/target/surefire-reports"
   smoke-tests:
     # This name is hard-referenced from bors.toml
     # Remember to update that if this name, or the matrix.os changes
@@ -200,6 +224,12 @@ jobs:
             **/target/surefire-reports/
             **/hs_err_*.log
           retention-days: 7
+      - name: Foresight Test Report Uploader
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-result-junit
+          path: "**/target/surefire-reports"
   go-client:
     name: Go client tests
     runs-on: ubuntu-latest
@@ -213,8 +243,15 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: 'maven'
+      - run: go get gotest.tools/gotestsum
       - run: mvn -T1C -B -DskipChecks -DskipTests install
       - run: docker build --build-arg DISTBALL=dist/target/camunda-zeebe-*.tar.gz --build-arg APP_ENV=dev -t camunda/zeebe:current-test .
-      - run: go test -mod=vendor -v ./...
+      - run: gotestsum --raw-command --junitfile TEST-go.xml go test -mod=vendor -v -json ./... 2>&1
         working-directory: clients/go
+      - name: Foresight Test Report Uploader
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-result-junit
+          path: "clients/go/TEST-go.xml"
 
