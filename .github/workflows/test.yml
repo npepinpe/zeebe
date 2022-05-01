@@ -56,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: test-result-junit
-          path: "**/target/failsafe-reports"
+          path: "**/target/failsafe-reports/"
       - name: Archive Test Results
         uses: actions/upload-artifact@v3
         if: failure()
@@ -108,7 +108,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: test-result-junit
-          path: "**/target/failsafe-reports"
+          path: "**/target/failsafe-reports/"
   project-list:
     # Builds a list of projects where unit tests can be run on hosted runners
     name: List projects
@@ -176,7 +176,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: test-result-junit
-          path: "**/target/surefire-reports"
+          path: "**/target/surefire-reports/"
   slow-unit-tests:
     name: Slow unit tests
     runs-on: "ubuntu-latest"
@@ -222,7 +222,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: test-result-junit
-          path: "**/target/surefire-reports"
+          path: "**/target/surefire-reports/"
   smoke-tests:
     # This name is hard-referenced from bors.toml
     # Remember to update that if this name, or the matrix.os changes
@@ -277,7 +277,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: test-result-junit
-          path: "**/target/surefire-reports"
+          path: "**/target/surefire-reports/"
   go-client:
     name: Go client tests
     runs-on: ubuntu-latest
