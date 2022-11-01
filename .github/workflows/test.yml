@@ -22,7 +22,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'maven'
-      - uses: stCarolas/setup-maven@v4.3
+      - uses: stCarolas/setup-maven@v4.5
         with:
           maven-version: 3.8.5
       - run: mvn -T1C -B -DskipChecks -DskipTests install
@@ -54,7 +54,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'maven'
-      - uses: stCarolas/setup-maven@v4.3
+      - uses: stCarolas/setup-maven@v4.5
         with:
           maven-version: 3.8.5
       - run: mvn -T1C -B -DskipChecks -DskipTests install
@@ -136,7 +136,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'maven'
-      - uses: stCarolas/setup-maven@v4.3
+      - uses: stCarolas/setup-maven@v4.5
         with:
           maven-version: 3.8.5
       - run: >
